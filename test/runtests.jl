@@ -19,7 +19,12 @@ LDLT = ldl(A)
 x = LDLT \ b
 
 r = A * x - b
-@assert norm(r) ≤ ϵ * norm(b)
+@test norm(r) ≤ ϵ * norm(b)
 
 y = collect(0.1:0.1:1)
 @test norm(x - y) ≤ ϵ * norm(y)
+
+# this matrix does not possess an LDL factorization without pivoting
+A = [ 0 1
+      1 1 ]
+@test_throws LDL.SQDException ldl(A, [1, 2])
