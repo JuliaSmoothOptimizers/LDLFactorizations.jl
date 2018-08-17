@@ -5,9 +5,15 @@ os:
   - osx
 
 julia:
-  - 0.5
   - 0.6
+  - 0.7
+  - 1.0
   - nightly
+
+matrix:
+  allow_failures:
+    - 1.0
+    - nightly
 
 sudo: required
 
