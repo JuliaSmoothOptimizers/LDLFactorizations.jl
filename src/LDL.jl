@@ -2,9 +2,9 @@ module LDL
 
 export ldl, \
 
-using AMD
+using AMD, Compat
 
-type SQDException <: Exception
+mutable struct SQDException <: Exception
   msg::String
 end
 
@@ -123,38 +123,38 @@ function ldl_solve(n, b, Lp, Li, Lx, D, P)
 end
 
 # a simplistic type for LDL' factorizations so we can do \
-type LDLFactorization{T<:Real,Ti<:Integer}
+mutable struct LDLFactorization{T<:Real,Ti<:Integer}
   L::SparseMatrixCSC{T,Ti}
   D::Vector{T}
   P::Vector{Ti}
 end
 
 # use AMD permutation by default
-ldl{T<:Real}(A::Array{T,2}, args...) = ldl(sparse(A), args...)
-ldl{T<:Real,Ti<:Integer}(A::SparseMatrixCSC{T,Ti}) = ldl(A, amd(A))
+ldl(A::Array{T,2}, args...) where T<:Real = ldl(sparse(A), args...)
+ldl(A::SparseMatrixCSC{T,Ti}) where {T<:Real,Ti<:Integer} = ldl(A, amd(A))
 
 # use ldl(A, collect(1:n)) to suppress permutation
-function ldl{T<:Real,Ti<:Integer}(A::SparseMatrixCSC{T,Ti}, P::Vector{Int})
+function ldl(A::SparseMatrixCSC{T,Ti}, P::Vector{Int}) where {T<:Real,Ti<:Integer}
   n = size(A, 1)
   n == size(A, 2) || throw(DimensionMismatch("matrix must be square"))
   n == length(P) || throw(DimensionMismatch("permutation size mismatch"))
 
   # allocate space for symbolic analysis
-  parent = Vector{Ti}(n)
-  Lnz = Vector{Ti}(n)
-  flag = Vector{Ti}(n)
-  pinv = Vector{Ti}(n)
-  Lp = Vector{Ti}(n+1)
+  parent = Vector{Ti}(undef, n)
+  Lnz = Vector{Ti}(undef, n)
+  flag = Vector{Ti}(undef, n)
+  pinv = Vector{Ti}(undef, n)
+  Lp = Vector{Ti}(undef, n+1)
 
   # perform symbolic analysis
   ldl_symbolic!(n, A.colptr, A.rowval, Lp, parent, Lnz, flag, P, pinv)
 
   # allocate space for numerical factorization
-  Li = Vector{Ti}(Lp[n] - 1)
-  Lx = Vector{T}(Lp[n] - 1)
-  Y = Vector{T}(n)
-  D = Vector{T}(n)
-  pattern = Vector{Ti}(n)
+  Li = Vector{Ti}(undef, Lp[n] - 1)
+  Lx = Vector{T}(undef, Lp[n] - 1)
+  Y = Vector{T}(undef, n)
+  D = Vector{T}(undef, n)
+  pattern = Vector{Ti}(undef, n)
 
   # perform numerical factorization
   ldl_numeric!(n, A.colptr, A.rowval, A.nzval, Lp, parent, Lnz, Li, Lx, D, Y, pattern, flag, P, pinv)
@@ -163,7 +163,7 @@ function ldl{T<:Real,Ti<:Integer}(A::SparseMatrixCSC{T,Ti}, P::Vector{Int})
 end
 
 import Base.(\)
-(\){T<:Real,Ti<:Integer}(LDL::LDLFactorization{T,Ti}, b::AbstractVector{T}) =
+(\)(LDL::LDLFactorization{T,Ti}, b::AbstractVector{T}) where {T<:Real,Ti<:Integer} =
   ldl_solve(LDL.L.n, b, LDL.L.colptr, LDL.L.rowval, LDL.L.nzval, LDL.D, LDL.P)
 
 end  # module
