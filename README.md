@@ -1,20 +1,20 @@
-# LDL: Factorization of Symmetric Matrices
+# LDLFactorizations: Factorization of Symmetric Matrices
 
-[![Build Status](https://travis-ci.org/JuliaSmoothOptimizers/LDL.jl.svg?branch=master)](https://travis-ci.org/JuliaSmoothOptimizers/LDL.jl)
-[![Build status](https://ci.appveyor.com/api/projects/status/eyyrgo7qg7uxbvxm/branch/master?svg=true)](https://ci.appveyor.com/project/dpo/ldl-jl/branch/master)
-[![Coverage Status](https://coveralls.io/repos/github/JuliaSmoothOptimizers/LDL.jl/badge.svg)](https://coveralls.io/github/JuliaSmoothOptimizers/LDL.jl)
+[![Build Status](https://travis-ci.org/JuliaSmoothOptimizers/LDLFactorizations.jl.svg?branch=master)](https://travis-ci.org/JuliaSmoothOptimizers/LDLFactorizations.jl)
+[![Build status](https://ci.appveyor.com/api/projects/status/eyyrgo7qg7uxbvxm/branch/master?svg=true)](https://ci.appveyor.com/project/dpo/ldlfactorizations-jl/branch/master)
+[![Coverage Status](https://coveralls.io/repos/github/JuliaSmoothOptimizers/LDLFactorizations.jl/badge.svg)](https://coveralls.io/github/JuliaSmoothOptimizers/LDLFactorizations.jl)
 
 A translation of Tim Davis's Concise LDL Factorization, part of [SuiteSparse](http://faculty.cse.tamu.edu/davis/suitesparse.html).
 
 This package is appropriate for matrices A that possess a factorization of the
 form LDLᵀ without pivoting, where L is unit lower triangular and D is *diagonal* (indefinite in general), including definite and quasi-definite matrices.
 
-LDL.jl should not be expected to be as fast, as robust or as accurate as factorization
+LDLFactorizations.jl should not be expected to be as fast, as robust or as accurate as factorization
 packages such as [HSL.jl](https://github.com/JuliaSmoothOptimizers/HSL.jl), [MUMPS.jl](https://github.com/JuliaSmoothOptimizers/MUMPS.jl) or [Pardiso.jl](https://github.com/JuliaSparse/Pardiso.jl).
 Those are multifrontal and/or implement various forms of parallelism, and
 employ sophisticated pivot strategies.
 
-The main advantages of LDL.jl are that
+The main advantages of LDLFactorizations.jl are that
 
 1. it is very short and has a small footprint;
 2. it is in pure Julia, and so
@@ -24,13 +24,12 @@ The main advantages of LDL.jl are that
    2.b. it will work with multiple input data types.
 
 Whereas MUMPS.jl, HSL.jl and Pardiso.jl only work with single and double precision
-reals and complex data types, LDL.jl accepts any numerical data type.
+reals and complex data types, LDLFactorizations.jl accepts any numerical data type.
 
 # Installing
 
 ```julia
-julia> Pkg.clone("https://github.com/JuliaSmoothOptimizers/LDL.jl.git")
-julia> Pkg.test("LDL")
+julia> Pkg.add("LDLFactorizations")
 ```
 
 # Usage

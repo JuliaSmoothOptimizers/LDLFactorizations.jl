@@ -1,4 +1,4 @@
-using LDL
+using LDLFactorizations
 using Base.Test
 
 # this matrix possesses an LDL factorization without pivoting
@@ -27,4 +27,4 @@ y = collect(0.1:0.1:1)
 # this matrix does not possess an LDL factorization without pivoting
 A = [ 0 1
       1 1 ]
-@test_throws LDL.SQDException ldl(A, [1, 2])
+@test_throws LDLFactorizations.SQDException ldl(A, [1, 2])
