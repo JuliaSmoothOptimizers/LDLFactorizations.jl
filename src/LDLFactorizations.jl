@@ -1,4 +1,4 @@
-module LDL
+module LDLFactorizations
 
 export ldl, \
 
