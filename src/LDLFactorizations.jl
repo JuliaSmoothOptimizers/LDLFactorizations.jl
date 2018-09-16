@@ -2,7 +2,7 @@ module LDLFactorizations
 
 export ldl, \
 
-using AMD, Compat
+using AMD, SparseArrays
 
 mutable struct SQDException <: Exception
   msg::String

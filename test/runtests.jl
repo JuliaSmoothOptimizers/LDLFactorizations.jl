@@ -1,5 +1,4 @@
-using LDLFactorizations
-using Base.Test
+using LDLFactorizations, Test, LinearAlgebra
 
 # this matrix possesses an LDL factorization without pivoting
 A = [ 1.7     0     0     0     0     0     0     0   .13     0
