@@ -36,12 +36,13 @@ julia> Pkg.add("LDLFactorizations")
 
 The only exported function is `ldl()`.
 Calling `ldl()` with a dense array converts it to a sparse matrix.
-Only the lower triangle of the matrix is accessed, thus `ldl(A)` is always
-the same as `ldl(A - triu(A, 1) + tril(A, -1)')`.
 A permutation ordering can be supplied: `ldl(A, p)` where `p` is an `Int`
 array representing a permutation of the integers between 1 and the order
 of `A`.
 If no permutation is supplied, one is automatically computed using [AMD.jl](https://github.com/JuliaSmoothOptimizers/AMD.jl).
+When no permutation is used, i.e., when `p = collect(1:n)`, only the upper triangle of `A` is accessed, and `ldl(A)` is the same as `ldl(triu(A))`.
+Otherwise, only the upper triangle of the symmetrically-permuted `A` are accessed.
+Thus, unless the identity permutation is enforced, both triangles of `A` should be supplied as input.
 
 `ldl` returns a factorization in the form of a `LDLFactorization` object.
 The `\` method is implemented for objects of type `LDLFactorization` so that
@@ -52,6 +53,10 @@ julia> x = LDLT \ b  # solves Ax=b
 ```
 The factorization can of course be reused to solve for multiple right-hand
 sides.
+
+Factors can be accessed as `LDLT.L` and `LDLT.D`, and the permutation vector as `LDLT.P`.
+Because the L factor is unit lower triangular, its diagonal is not stored.
+Thus the factors satisfy: PAPᵀ = (L + I) D (L + I)ᵀ.
 
 # References
 
