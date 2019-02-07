@@ -64,4 +64,4 @@ Timothy A. Davis. 2005. Algorithm 849: A concise sparse Cholesky factorization p
 
 Like the original LDL, this package is distributed under the LGPL.
 
-[![GPLv3](http://www.gnu.org/graphics/lgplv3-88x31.png)](http://www.gnu.org/licenses/lgpl.html "LGPLv3")
+[![LGPLv3](http://www.gnu.org/graphics/lgplv3-88x31.png)](http://www.gnu.org/licenses/lgpl.html "LGPLv3")
