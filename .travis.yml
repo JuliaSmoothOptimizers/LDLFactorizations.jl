@@ -5,8 +5,8 @@ os:
   - osx
 
 julia:
-  - 0.7
   - 1.0
+  - 1.1
   - nightly
 
 matrix:
@@ -24,12 +24,6 @@ notifications:
 branches:
   only:
     - master
-
-before_install:
-  - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
-
-script:
-  - julia --check-bounds=yes -e 'using Pkg; Pkg.clone(pwd()); Pkg.build("LDLFactorizations"); Pkg.test("LDLFactorizations"; coverage=true)'
 
 after_success:
   - julia -e 'cd(Pkg.dir("LDLFactorizations")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'
