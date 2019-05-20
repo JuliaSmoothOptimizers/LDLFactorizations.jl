@@ -134,7 +134,7 @@ ldl(A::Array{T,2}, args...) where T<:Real = ldl(sparse(A), args...)
 ldl(A::SparseMatrixCSC{T,Ti}) where {T<:Real,Ti<:Integer} = ldl(A, amd(A))
 
 # use ldl(A, collect(1:n)) to suppress permutation
-function ldl(A::SparseMatrixCSC{T,Ti}, P::Vector{Int}) where {T<:Real,Ti<:Integer}
+function ldl(A::SparseMatrixCSC{T,Ti}, P::Vector{Ti}) where {T<:Real,Ti<:Integer}
   n = size(A, 1)
   n == size(A, 2) || throw(DimensionMismatch("matrix must be square"))
   n == length(P) || throw(DimensionMismatch("permutation size mismatch"))

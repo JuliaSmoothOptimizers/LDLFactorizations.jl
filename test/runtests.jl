@@ -1,4 +1,4 @@
-using LDLFactorizations, Test, LinearAlgebra
+using LDLFactorizations, Test, LinearAlgebra, SparseArrays
 
 # this matrix possesses an LDL factorization without pivoting
 A = [ 1.7     0     0     0     0     0     0     0   .13     0
@@ -27,3 +27,13 @@ y = collect(0.1:0.1:1)
 A = [ 0 1
       1 1 ]
 @test_throws LDLFactorizations.SQDException ldl(A, [1, 2])
+
+# Sparse tests
+for Ti in (Int32, Int), Tf in (Float32, Float64, BigFloat)
+  A = sparse(Ti[1, 2, 1, 2], Ti[1, 1, 2, 2], Tf[10, 2, 2, 5])
+  b = A * ones(Tf, 2)
+  LDLT = ldl(A)
+  x = LDLT \ b
+  r = A * x - b
+  @test norm(r) ≤ sqrt(eps(Tf)) * norm(b)
+end
