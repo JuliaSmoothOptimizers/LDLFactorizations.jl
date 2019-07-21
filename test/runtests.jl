@@ -14,13 +14,19 @@ A = [ 1.7     0     0     0     0     0     0     0   .13     0
 b = [.287, .22, .45, .44, 2.486, .72, 1.55, 1.424, 1.621, 3.759]
 ϵ = sqrt(eps(eltype(A)))
 
+y = collect(0.1:0.1:1)
+
 LDLT = ldl(A)
 x = LDLT \ b
-
 r = A * x - b
 @test norm(r) ≤ ϵ * norm(b)
+@test norm(x - y) ≤ ϵ * norm(y)
 
-y = collect(0.1:0.1:1)
+# test with input containing only upper triangular part
+LDLT = ldl(sparse(UpperTriangular(A)), onlyupper = true)
+x = LDLT \ b
+r = A * x - b
+@test norm(r) ≤ ϵ * norm(b)
 @test norm(x - y) ≤ ϵ * norm(y)
 
 # this matrix does not possess an LDL factorization without pivoting
@@ -32,8 +38,11 @@ A = [ 0 1
 for Ti in (Int32, Int), Tf in (Float32, Float64, BigFloat)
   A = sparse(Ti[1, 2, 1, 2], Ti[1, 1, 2, 2], Tf[10, 2, 2, 5])
   b = A * ones(Tf, 2)
-  LDLT = ldl(A)
-  x = LDLT \ b
-  r = A * x - b
-  @test norm(r) ≤ sqrt(eps(Tf)) * norm(b)
+  P = Ti[2; 1]
+
+  for LDLT in [ldl(A), ldl(A, P), ldl(sparse(UpperTriangular(A)), P, onlyupper = true)]
+    x = LDLT \ b
+    r = A * x - b
+    @test norm(r) ≤ sqrt(eps(Tf)) * norm(b)
+  end
 end

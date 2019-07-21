@@ -38,6 +38,59 @@ function ldl_symbolic!(n, Ap, Ai, Lp, parent, Lnz, flag, P, Pinv)
   end
 end
 
+function ldl_symbolic_onlyupper!(n, Ap, Ai, Lp, parent, Lnz, flag, P, Pinv)
+  # compute inverse permutation
+  @inbounds for k = 1:n
+    Pinv[P[k]] = k
+  end
+
+  @inbounds for k = 1:n
+    parent[k] = -1
+    flag[k] = k
+    Lnz[k] = 0
+    pk = P[k]
+    @inbounds for p = Ap[pk] : (Ap[pk+1] - 1)
+      j = Ai[p]
+      j > pk && break # ignore lower triangular part
+      i = Pinv[j]
+      i ≥ k && continue
+      @inbounds while flag[i] != k
+        if parent[i] == -1
+          parent[i] = k
+        end
+        Lnz[i] += 1
+        flag[i] = k
+        i = parent[i]
+      end
+    end
+    # do lower triangular part by assuming symmetry and reading only the upper
+    @inbounds for j = pk + 1 : n
+      i = Pinv[j]
+      i ≥ k && continue
+      pp = 0
+      # check if element [pk, j] (and therefore [j, pk]) is stored
+      for p in Ap[j] : Ap[j+1] - 1
+        if pk == Ai[p]
+          pp = p; break
+        end
+      end
+      pp == 0 && continue
+      @inbounds while flag[i] != k
+       if parent[i] == -1
+          parent[i] = k
+       end
+       Lnz[i] += 1
+       flag[i] = k
+       i = parent[i]
+     end
+    end
+  end
+  Lp[1] = 1
+  @inbounds for k = 1:n
+    Lp[k+1] = Lp[k] + Lnz[k]
+  end
+end
+
 function ldl_numeric!(n, Ap, Ai, Ax, Lp, parent, Lnz, Li, Lx, D, Y,
                       pattern, flag, P, Pinv)
   @inbounds for k = 1:n
@@ -50,6 +103,80 @@ function ldl_numeric!(n, Ap, Ai, Ax, Lp, parent, Lnz, Li, Lx, D, Y,
       i = Pinv[Ai[p]]
       i > k && continue
       Y[i] += Ax[p]
+      len = 1
+      @inbounds while flag[i] != k
+        pattern[len] = i
+        len += 1
+        flag[i] = k
+        i = parent[i]
+      end
+      @inbounds while len > 1
+        top -= 1
+        len -= 1
+        pattern[top] = pattern[len]
+      end
+    end
+    D[k] = Y[k]
+    Y[k] = 0
+    @inbounds while top ≤ n
+      i = pattern[top]
+      yi = Y[i]
+      Y[i] = 0
+      @inbounds for p = Lp[i] : (Lp[i] + Lnz[i] - 1)
+        Y[Li[p]] -= Lx[p] * yi
+      end
+      p = Lp[i] + Lnz[i]
+      l_ki = yi / D[i]
+      D[k] -= l_ki * yi
+      Li[p] = k
+      Lx[p] = l_ki
+      Lnz[i] += 1
+      top += 1
+    end
+    D[k] == 0 && throw(SQDException("matrix does not possess a LDL' factorization for this permutation"))
+  end
+end
+
+function ldl_numeric_onlyupper!(n, Ap, Ai, Ax, Lp, parent, Lnz, Li, Lx, D, Y,
+                                pattern, flag, P, Pinv)
+  @inbounds for k = 1:n
+    Y[k] = 0
+    top = n+1
+    flag[k] = k
+    Lnz[k] = 0
+    pk = P[k]
+    @inbounds for p = Ap[pk] : (Ap[pk+1] - 1)
+      j = Ai[p]
+      j > pk && break
+      i = Pinv[j]
+      i > k && continue
+      Y[i] += Ax[p]
+      len = 1
+      @inbounds while flag[i] != k
+        pattern[len] = i
+        len += 1
+        flag[i] = k
+        i = parent[i]
+      end
+      @inbounds while len > 1
+        top -= 1
+        len -= 1
+        pattern[top] = pattern[len]
+      end
+    end
+    # do lower triangular part by assuming symmetry and reading only the upper
+    @inbounds for j = pk + 1 : n
+      i = Pinv[j]
+      i > k && continue
+      pp = 0
+      # check if element [pk, j] (and therefore [j, pk]) is stored
+      for p in Ap[j] : Ap[j+1] - 1
+        if pk == Ai[p]
+          pp = p; break
+        end
+      end
+      pp == 0 && continue
+      Y[i] += Ax[pp]
       len = 1
       @inbounds while flag[i] != k
         pattern[len] = i
@@ -123,18 +250,19 @@ function ldl_solve(n, b, Lp, Li, Lx, D, P)
 end
 
 # a simplistic type for LDL' factorizations so we can do \
-mutable struct LDLFactorization{T<:Real,Ti<:Integer}
+mutable struct LDLFactorization{T<:Real,Ti<:Integer,Tj<:Integer}
   L::SparseMatrixCSC{T,Ti}
   D::Vector{T}
-  P::Vector{Ti}
+  P::Vector{Tj}
 end
 
 # use AMD permutation by default
 ldl(A::Array{T,2}, args...) where T<:Real = ldl(sparse(A), args...)
-ldl(A::SparseMatrixCSC{T,Ti}) where {T<:Real,Ti<:Integer} = ldl(A, amd(A))
+
+ldl(A::SparseMatrixCSC{T,Ti}; onlyupper::Bool = false) where {T<:Real,Ti<:Integer} = ldl(A, amd(A); onlyupper = onlyupper)
 
 # use ldl(A, collect(1:n)) to suppress permutation
-function ldl(A::SparseMatrixCSC{T,Ti}, P::Vector{Ti}) where {T<:Real,Ti<:Integer}
+function ldl(A::SparseMatrixCSC{T,Ti}, P::Vector{Tj}; onlyupper::Bool = false) where {T<:Real,Ti<:Integer,Tj<:Integer}
   n = size(A, 1)
   n == size(A, 2) || throw(DimensionMismatch("matrix must be square"))
   n == length(P) || throw(DimensionMismatch("permutation size mismatch"))
@@ -147,7 +275,11 @@ function ldl(A::SparseMatrixCSC{T,Ti}, P::Vector{Ti}) where {T<:Real,Ti<:Integer
   Lp = Vector{Ti}(undef, n+1)
 
   # perform symbolic analysis
-  ldl_symbolic!(n, A.colptr, A.rowval, Lp, parent, Lnz, flag, P, pinv)
+  if onlyupper
+    ldl_symbolic_onlyupper!(n, A.colptr, A.rowval, Lp, parent, Lnz, flag, P, pinv)
+  else
+    ldl_symbolic!(n, A.colptr, A.rowval, Lp, parent, Lnz, flag, P, pinv)
+  end
 
   # allocate space for numerical factorization
   Li = Vector{Ti}(undef, Lp[n] - 1)
@@ -157,7 +289,11 @@ function ldl(A::SparseMatrixCSC{T,Ti}, P::Vector{Ti}) where {T<:Real,Ti<:Integer
   pattern = Vector{Ti}(undef, n)
 
   # perform numerical factorization
-  ldl_numeric!(n, A.colptr, A.rowval, A.nzval, Lp, parent, Lnz, Li, Lx, D, Y, pattern, flag, P, pinv)
+  if onlyupper
+    ldl_numeric_onlyupper!(n, A.colptr, A.rowval, A.nzval, Lp, parent, Lnz, Li, Lx, D, Y, pattern, flag, P, pinv)
+  else
+    ldl_numeric!(n, A.colptr, A.rowval, A.nzval, Lp, parent, Lnz, Li, Lx, D, Y, pattern, flag, P, pinv)
+  end
 
   return LDLFactorization(SparseMatrixCSC{T,Ti}(n, n, Lp, Li, Lx), D, P)
 end
