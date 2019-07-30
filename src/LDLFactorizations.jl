@@ -38,7 +38,7 @@ function ldl_symbolic!(n, Ap, Ai, Lp, parent, Lnz, flag, P, Pinv)
   end
 end
 
-function ldl_symbolic_onlyupper!(n, Ap, Ai, Lp, parent, Lnz, flag, P, Pinv)
+function ldl_symbolic_onlyupper!(n, Ap, Ai, Lp, parent, Lnz, flag, P, Pinv, Arowptr, Acolval)
   # compute inverse permutation
   @inbounds for k = 1:n
     Pinv[P[k]] = k
@@ -64,25 +64,19 @@ function ldl_symbolic_onlyupper!(n, Ap, Ai, Lp, parent, Lnz, flag, P, Pinv)
       end
     end
     # do lower triangular part by assuming symmetry and reading only the upper
-    @inbounds for j = pk + 1 : n
+    @inbounds for p in Arowptr[pk] + 1 : Arowptr[pk + 1] - 1
+      j = Acolval[p]
+      j <= pk && continue # ignore lower triangular part
       i = Pinv[j]
       i ≥ k && continue
-      pp = 0
-      # check if element [pk, j] (and therefore [j, pk]) is stored
-      for p in Ap[j] : Ap[j+1] - 1
-        if pk == Ai[p]
-          pp = p; break
-        end
-      end
-      pp == 0 && continue
       @inbounds while flag[i] != k
-       if parent[i] == -1
+        if parent[i] == -1
           parent[i] = k
-       end
-       Lnz[i] += 1
-       flag[i] = k
-       i = parent[i]
-     end
+        end
+        Lnz[i] += 1
+        flag[i] = k
+        i = parent[i]
+      end
     end
   end
   Lp[1] = 1
@@ -138,7 +132,7 @@ function ldl_numeric!(n, Ap, Ai, Ax, Lp, parent, Lnz, Li, Lx, D, Y,
 end
 
 function ldl_numeric_onlyupper!(n, Ap, Ai, Ax, Lp, parent, Lnz, Li, Lx, D, Y,
-                                pattern, flag, P, Pinv)
+                                pattern, flag, P, Pinv, Arowptr, Acolval)
   @inbounds for k = 1:n
     Y[k] = 0
     top = n+1
@@ -147,7 +141,7 @@ function ldl_numeric_onlyupper!(n, Ap, Ai, Ax, Lp, parent, Lnz, Li, Lx, D, Y,
     pk = P[k]
     @inbounds for p = Ap[pk] : (Ap[pk+1] - 1)
       j = Ai[p]
-      j > pk && break
+      j > pk && break # ignore lower triangular part
       i = Pinv[j]
       i > k && continue
       Y[i] += Ax[p]
@@ -165,17 +159,17 @@ function ldl_numeric_onlyupper!(n, Ap, Ai, Ax, Lp, parent, Lnz, Li, Lx, D, Y,
       end
     end
     # do lower triangular part by assuming symmetry and reading only the upper
-    @inbounds for j = pk + 1 : n
+    @inbounds for p in Arowptr[pk] + 1 : Arowptr[pk + 1] - 1
+      j = Acolval[p]
+      j <= pk && continue # ignore lower triangular part
       i = Pinv[j]
       i > k && continue
       pp = 0
-      # check if element [pk, j] (and therefore [j, pk]) is stored
-      for p in Ap[j] : Ap[j+1] - 1
-        if pk == Ai[p]
-          pp = p; break
+      for wat in Ap[j] : Ap[j + 1] - 1
+        if Ai[wat] == pk
+          pp = wat
         end
       end
-      pp == 0 && continue
       Y[i] += Ax[pp]
       len = 1
       @inbounds while flag[i] != k
@@ -209,6 +203,31 @@ function ldl_numeric_onlyupper!(n, Ap, Ai, Ax, Lp, parent, Lnz, Li, Lx, D, Y,
     end
     D[k] == 0 && throw(SQDException("matrix does not possess a LDL' factorization for this permutation"))
   end
+end
+
+function getAtindices(Ap, Ar)
+  Arowptr = zeros(Int, length(Ap))
+  temp = zeros(Int, length(Ap))
+  Acolval = similar(Ar)
+  m = length(Ap) - 1
+
+  Arowptr[1] = 1
+  for k in Ar
+    Arowptr[k + 1] += 1
+  end
+  for i in 2:m
+    Arowptr[i] += Arowptr[i - 1]
+  end
+  Arowptr[m + 1] = Arowptr[m] + 1
+
+  for col in 1 : m
+    for i in Ap[col] : Ap[col + 1] - 1
+      j = Ar[i]
+      Acolval[Arowptr[j] + temp[j]] = col
+      temp[j] += 1
+    end
+  end
+  return Arowptr, Acolval
 end
 
 function ldl_lsolve!(n, x, Lp, Li, Lx)
@@ -274,9 +293,11 @@ function ldl(A::SparseMatrixCSC{T,Ti}, P::Vector{Tj}; onlyupper::Bool = false) w
   pinv = Vector{Ti}(undef, n)
   Lp = Vector{Ti}(undef, n+1)
 
+  Arowptr, Acolval = getAtindices(A.colptr, A.rowval)
+
   # perform symbolic analysis
   if onlyupper
-    ldl_symbolic_onlyupper!(n, A.colptr, A.rowval, Lp, parent, Lnz, flag, P, pinv)
+    ldl_symbolic_onlyupper!(n, A.colptr, A.rowval, Lp, parent, Lnz, flag, P, pinv, Arowptr, Acolval)
   else
     ldl_symbolic!(n, A.colptr, A.rowval, Lp, parent, Lnz, flag, P, pinv)
   end
@@ -290,7 +311,7 @@ function ldl(A::SparseMatrixCSC{T,Ti}, P::Vector{Tj}; onlyupper::Bool = false) w
 
   # perform numerical factorization
   if onlyupper
-    ldl_numeric_onlyupper!(n, A.colptr, A.rowval, A.nzval, Lp, parent, Lnz, Li, Lx, D, Y, pattern, flag, P, pinv)
+    ldl_numeric_onlyupper!(n, A.colptr, A.rowval, A.nzval, Lp, parent, Lnz, Li, Lx, D, Y, pattern, flag, P, pinv, Arowptr, Acolval)
   else
     ldl_numeric!(n, A.colptr, A.rowval, A.nzval, Lp, parent, Lnz, Li, Lx, D, Y, pattern, flag, P, pinv)
   end
