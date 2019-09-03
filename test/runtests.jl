@@ -54,7 +54,7 @@ b = [.287, .22, .45, .44, 2.486, .72, 1.55, 1.424, 1.621, 3.759]
 ϵ = sqrt(eps(eltype(A)))
 
 A_upper = triu(A)
-LDLT_upper = ldl(A_upper, upper=true)
+LDLT_upper = ldl(A_upper, upper = true)
 x = LDLT_upper \ b
 
 r = A * x - b
