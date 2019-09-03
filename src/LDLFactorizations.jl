@@ -2,17 +2,18 @@ module LDLFactorizations
 
 export ldl, \
 
-using AMD, SparseArrays
+using AMD, LinearAlgebra, SparseArrays
 
 mutable struct SQDException <: Exception
   msg::String
 end
 
 """
-Compute the sparse structure of missing elements of the upper triangle of PAPt. Non zero elements have to verify Pinv[i] < Pinv[j] where i is the
-row indice and j the column indice. Those elements are the non zero of the lower triangle of A which will be in the upper triangle of PAPt (after permutation)
+    col_symb!(n, Ap, Ai, Cp, w, Pinv)
+Compute the sparse structure of missing elements of the upper triangle of PAPt. Nonzero elements have to verify Pinv[i] < Pinv[j] where i is the
+row index and j the column index. Those elements are the nonzeros of the lower triangle of A that will be in the upper triangle of PAPt (after permutation)
 # Arguments
-- `n::Ti`: number of column of the matrix
+- `n::Ti`: number of columns of the matrix
 - `Ap::Vector{Ti}`: colptr of the matrix to factorize (CSC format)
 - `Ai::Vector{Ti}`: rowval of the matrix to factorize (CSC format)
 - `Cp::Vector{Ti}`: colptr of the lower triangle (to be modified)
@@ -20,7 +21,7 @@ row indice and j the column indice. Those elements are the non zero of the lower
 - `Pinv::Vector{Ti}`: inverse permutation of P. PAPt is the matrix to factorize (CSC format)
 """
 function col_symb!(n, Ap, Ai, Cp, w, Pinv)
-  fill!(w,0)
+  fill!(w, 0)
   @inbounds for j = 1:n
     @inbounds for p = Ap[j] : (Ap[j+1]-1)
       i = Ai[p]
@@ -38,10 +39,11 @@ function col_symb!(n, Ap, Ai, Cp, w, Pinv)
 end
 
 """
-Compute the rowval and values of missing elements of the upper triangle of PAPt Non zero elements have to verify Pinv[i] >= Pinv[j] where i is the
-row indice and j the column indice. Those elements are the non zero of the lower triangle of A which will be in the upper triangle of PAPt (after permutation)
+    col_num!(n, Ap, Ai, Cp, w, Pinv)
+Compute the rowval and values of missing elements of the upper triangle of PAPt. Nonzero elements have to verify Pinv[i] >= Pinv[j] where i is the
+row index and j the column index. Those elements are the nonzeros of the lower triangle of A that will be in the upper triangle of PAPt (after permutation)
 # Arguments
-- `n::Ti`: number of column of the matrix
+- `n::Ti`: number of columns of the matrix
 - `Ap::Vector{Ti}`: colptr of the matrix to factorize (CSC format)
 - `Ai::Vector{Ti}`: rowval of the matrix to factorize (CSC format)
 - `Ax::Vector{Ti}`: values of the matrix to factorize (CSC format)
@@ -81,7 +83,7 @@ function ldl_symbolic_upper!(n, Ap, Ai, Cp, Ci , Lp, parent, Lnz, flag, P, Pinv)
       end
     end
 
-    # Missing non zero elements of the upper triangle
+    # Missing nonzero elements of the upper triangle
     @inbounds for ind = Cp[pk] : (Cp[pk+1] - 1)
       i = Pinv[Ci[ind]]
       i > k && continue
@@ -288,10 +290,16 @@ end
 
 # use AMD permutation by default
 ldl(A::Array{T,2}, args...; upper = false) where T<:Real = ldl(sparse(A), args...; upper = upper)
-ldl(A::SparseMatrixCSC{T,Ti}; upper = false ) where {T<:Real,Ti<:Integer} = ldl(A, amd(A); upper = upper)
+ldl(A::SparseMatrixCSC{T,Ti}; upper = false) where {T<:Real,Ti<:Integer} = ldl(A, amd(A); upper = upper)
+
+# symmetric matrix input
+function ldl(sA::Symmetric{T,SparseMatrixCSC{T,Ti}}, args...) where {T<:Real,Ti<:Integer}
+  sA.uplo == 'L' && error("matrix must contain the upper triangle")
+  ldl(sA.data, args...; upper = true )
+end
 
 # use ldl(A, collect(1:n)) to suppress permutation
-function ldl(A::SparseMatrixCSC{T,Ti}, P::Vector{Ti} ; upper = false) where {T<:Real,Ti<:Integer}
+function ldl(A::SparseMatrixCSC{T,Ti}, P::Vector{Ti}; upper = false) where {T<:Real,Ti<:Integer}
   n = size(A, 1)
   n == size(A, 2) || throw(DimensionMismatch("matrix must be square"))
   n == length(P) || throw(DimensionMismatch("permutation size mismatch"))
@@ -303,7 +311,7 @@ function ldl(A::SparseMatrixCSC{T,Ti}, P::Vector{Ti} ; upper = false) where {T<:
   pinv = Vector{Ti}(undef, n)
   Lp = Vector{Ti}(undef, n+1)
 
-  #Compute inverse permutation
+  # Compute inverse permutation
   @inbounds for k = 1:n
     pinv[P[k]] = k
   end
