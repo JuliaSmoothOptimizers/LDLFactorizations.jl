@@ -1,6 +1,6 @@
 name = "LDLFactorizations"
 uuid = "40e66cde-538c-5869-a4ad-c39174c6795b"
-version = "0.3.0"
+version = "0.4.0"
 
 [deps]
 AMD = "14f7f29c-3bd6-536c-9a0b-7339e30b5a3e"
