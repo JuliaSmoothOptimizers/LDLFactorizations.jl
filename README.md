@@ -2,6 +2,7 @@
 
 [![Build Status](https://travis-ci.org/JuliaSmoothOptimizers/LDLFactorizations.jl.svg?branch=master)](https://travis-ci.org/JuliaSmoothOptimizers/LDLFactorizations.jl)
 [![Build status](https://ci.appveyor.com/api/projects/status/eyyrgo7qg7uxbvxm/branch/master?svg=true)](https://ci.appveyor.com/project/dpo/ldlfactorizations-jl/branch/master)
+[![Build Status](https://api.cirrus-ci.com/github/JuliaSmoothOptimizers/LDLFactorizations.jl.svg)](https://cirrus-ci.com/github/JuliaSmoothOptimizers/LDLFactorizations.jl)
 [![Coverage Status](https://coveralls.io/repos/github/JuliaSmoothOptimizers/LDLFactorizations.jl/badge.svg)](https://coveralls.io/github/JuliaSmoothOptimizers/LDLFactorizations.jl)
 
 A translation of Tim Davis's Concise LDL Factorization, part of [SuiteSparse](http://faculty.cse.tamu.edu/davis/suitesparse.html).
