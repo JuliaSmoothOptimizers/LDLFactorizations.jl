@@ -41,9 +41,7 @@ A permutation ordering can be supplied: `ldl(A, p)` where `p` is an `Int`
 array representing a permutation of the integers between 1 and the order
 of `A`.
 If no permutation is supplied, one is automatically computed using [AMD.jl](https://github.com/JuliaSmoothOptimizers/AMD.jl).
-When no permutation is used, i.e., when `p = collect(1:n)`, only the upper triangle of `A` is accessed, and `ldl(A)` is the same as `ldl(triu(A))`.
-Otherwise, only the upper triangle of the symmetrically-permuted `A` are accessed.
-Thus, unless the identity permutation is enforced, both triangles of `A` should be supplied as input.
+Only the upper triangle of `A` is accessed.
 
 `ldl` returns a factorization in the form of a `LDLFactorization` object.
 The `\` method is implemented for objects of type `LDLFactorization` so that
