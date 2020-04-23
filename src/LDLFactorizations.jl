@@ -281,6 +281,15 @@ function ldl_solve(n, b, Lp, Li, Lx, D, P)
   return x
 end
 
+function ldl_solve!(n, b, Lp, Li, Lx, D, P)
+  @views y = b[P]
+  ldl_lsolve!(n, y, Lp, Li, Lx)
+  ldl_dsolve!(n, y, D)
+  ldl_ltsolve!(n, y, Lp, Li, Lx)
+  @views b[P] = y
+  return b
+end
+
 # a simplistic type for LDL' factorizations so we can do \
 mutable struct LDLFactorization{T<:Real,Ti<:Integer}
   L::SparseMatrixCSC{T,Ti}

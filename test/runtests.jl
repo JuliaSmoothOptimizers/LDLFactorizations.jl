@@ -23,6 +23,14 @@ r = A * x - b
 y = collect(0.1:0.1:1)
 @test norm(x - y) ≤ ϵ * norm(y)
 
+x2 = copy(b)
+ldl_solve!(length(b), x2, LDLT.L.colptr, LDLT.L.rowval, LDLT.L.nzval, LDLT.D, LDLT.P)
+
+r2 = A * x2 - b
+@test norm(r2) ≤ ϵ * norm(b)
+
+@test norm(x2 - y) ≤ ϵ * norm(y)
+
 # this matrix does not possess an LDL factorization without pivoting
 A = [ 0 1
       1 1 ]
@@ -36,6 +44,11 @@ for Ti in (Int32, Int), Tf in (Float32, Float64, BigFloat)
   x = LDLT \ b
   r = A * x - b
   @test norm(r) ≤ sqrt(eps(Tf)) * norm(b)
+
+  x2 .= b
+  ldl_solve!(length(b), x2, LDLT.L.colptr, LDLT.L.rowval, LDLT.L.nzval, LDLT.D, LDLT.P)
+  r2 = A * x2 - b
+  @test norm(r2) ≤ sqrt(eps(Tf)) * norm(b)
 end
 
 # Using only the upper triangle tests
@@ -63,6 +76,14 @@ r = A * x - b
 y = collect(0.1:0.1:1)
 @test norm(x - y) ≤ ϵ * norm(y)
 
+x2 .= b
+ldl_solve!(length(b), x2, LDLT_upper.L.colptr, LDLT_upper.L.rowval, LDLT_upper.L.nzval, LDLT.D, LDLT.P)
+
+r2 = A * x2 - b
+@test norm(r2) ≤ ϵ * norm(b)
+
+@test norm(x2 - y) ≤ ϵ * norm(y)
+
 # this matrix does not possess an LDL factorization without pivoting
 A = triu([ 0 1
            1 1 ])
@@ -77,4 +98,9 @@ for Ti in (Int32, Int), Tf in (Float32, Float64, BigFloat)
   x = LDLT \ b
   r = A * x - b
   @test norm(r) ≤ sqrt(eps(Tf)) * norm(b)
+
+  x2 .= b
+  ldl_solve!(length(b), x2, LDLT.L.colptr, LDLT.L.rowval, LDLT.L.nzval, LDLT.D, LDLT.P)
+  r2 = A * x2 - b
+  @test norm(r2) ≤ sqrt(eps(Tf)) * norm(b)
 end
