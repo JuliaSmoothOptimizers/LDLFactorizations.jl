@@ -45,7 +45,7 @@ for Ti in (Int32, Int), Tf in (Float32, Float64, BigFloat)
   r = A * x - b
   @test norm(r) ≤ sqrt(eps(Tf)) * norm(b)
 
-  x2 .= b
+  x2 = copy(b)
   ldl_solve!(length(b), x2, LDLT.L.colptr, LDLT.L.rowval, LDLT.L.nzval, LDLT.D, LDLT.P)
   r2 = A * x2 - b
   @test norm(r2) ≤ sqrt(eps(Tf)) * norm(b)
@@ -76,7 +76,7 @@ r = A * x - b
 y = collect(0.1:0.1:1)
 @test norm(x - y) ≤ ϵ * norm(y)
 
-x2 .= b
+x2 = copy(b)
 ldl_solve!(length(b), x2, LDLT_upper.L.colptr, LDLT_upper.L.rowval, LDLT_upper.L.nzval, LDLT.D, LDLT.P)
 
 r2 = A * x2 - b
@@ -99,7 +99,7 @@ for Ti in (Int32, Int), Tf in (Float32, Float64, BigFloat)
   r = A * x - b
   @test norm(r) ≤ sqrt(eps(Tf)) * norm(b)
 
-  x2 .= b
+  x2 = copy(b)
   ldl_solve!(length(b), x2, LDLT.L.colptr, LDLT.L.rowval, LDLT.L.nzval, LDLT.D, LDLT.P)
   r2 = A * x2 - b
   @test norm(r2) ≤ sqrt(eps(Tf)) * norm(b)
