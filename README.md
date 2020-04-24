@@ -52,8 +52,8 @@ LDLT = ldl(A)  # LDLᵀ factorization of A
 
 x = LDLT \ b   # solves Ax = b
 
-y = similar(b)
 ldiv!(LDLT, b)     # computes LDLT \ b in-place and overwriting b to store the result
+y = similar(b)
 ldiv!(y, LDLT, b)  # computes LDLT \ b in-place and store the result in y
 ```
 The factorization can of course be reused to solve for multiple right-hand
