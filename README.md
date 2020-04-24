@@ -5,7 +5,7 @@
 [![Build Status](https://api.cirrus-ci.com/github/JuliaSmoothOptimizers/LDLFactorizations.jl.svg)](https://cirrus-ci.com/github/JuliaSmoothOptimizers/LDLFactorizations.jl)
 [![Coverage Status](https://coveralls.io/repos/github/JuliaSmoothOptimizers/LDLFactorizations.jl/badge.svg)](https://coveralls.io/github/JuliaSmoothOptimizers/LDLFactorizations.jl)
 
-A translation of Tim Davis's Concise LDL Factorization, part of [SuiteSparse](http://faculty.cse.tamu.edu/davis/suitesparse.html).
+A translation of Tim Davis's Concise LDLᵀ Factorization, part of [SuiteSparse](http://faculty.cse.tamu.edu/davis/suitesparse.html).
 
 This package is appropriate for matrices A that possess a factorization of the
 form LDLᵀ without pivoting, where L is unit lower triangular and D is *diagonal* (indefinite in general), including definite and quasi-definite matrices.
@@ -30,12 +30,13 @@ reals and complex data types, LDLFactorizations.jl accepts any numerical data ty
 # Installing
 
 ```julia
-julia> Pkg.add("LDLFactorizations")
+julia> ]
+pkg> add LDLFactorizations
 ```
 
 # Usage
 
-The only exported function is `ldl()`.
+The only exported functions are `ldl()`, `\` and `ldiv!`.
 Calling `ldl()` with a dense array converts it to a sparse matrix.
 A permutation ordering can be supplied: `ldl(A, p)` where `p` is an `Int`
 array representing a permutation of the integers between 1 and the order
@@ -44,11 +45,16 @@ If no permutation is supplied, one is automatically computed using [AMD.jl](http
 Only the upper triangle of `A` is accessed.
 
 `ldl` returns a factorization in the form of a `LDLFactorization` object.
-The `\` method is implemented for objects of type `LDLFactorization` so that
+The `\` and `ldiv!` methods are implemented for objects of type `LDLFactorization` so that
 solving a linear system is as easy as
 ```julia
-julia> LDLT = ldl(A)
-julia> x = LDLT \ b  # solves Ax=b
+LDLT = ldl(A)  # LDLᵀ factorization of A
+
+x = LDLT \ b   # solves Ax = b
+
+y = similar(b)
+ldiv!(LDLT, b)     # computes LDLT \ b in-place and overwriting b to store the result
+ldiv!(y, LDLT, b)  # computes LDLT \ b in-place and store the result in y
 ```
 The factorization can of course be reused to solve for multiple right-hand
 sides.
