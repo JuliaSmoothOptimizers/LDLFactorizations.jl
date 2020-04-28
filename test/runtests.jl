@@ -45,6 +45,7 @@ for Ti in (Int32, Int), Tf in (Float32, Float64, BigFloat)
   r = A * x - b
   @test norm(r) ≤ sqrt(eps(Tf)) * norm(b)
 
+  x2 = copy(b)
   ldiv!(LDLT, x2)
   r2 = A * x2 - b
   @test norm(r2) ≤ sqrt(eps(Tf)) * norm(b)
@@ -80,6 +81,7 @@ r = A * x - b
 y = collect(0.1:0.1:1)
 @test norm(x - y) ≤ ϵ * norm(y)
 
+x2 = copy(b)
 ldiv!(LDLT, x2)
 
 r2 = A * x2 - b
@@ -103,6 +105,7 @@ for Ti in (Int32, Int), Tf in (Float32, Float64, BigFloat)
   r = A * x - b
   @test norm(r) ≤ sqrt(eps(Tf)) * norm(b)
 
+  x2 = copy(b)
   ldiv!(LDLT, x2)
 
   r2 = A * x2 - b
