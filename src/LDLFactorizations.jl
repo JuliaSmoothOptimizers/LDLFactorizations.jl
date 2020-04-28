@@ -1,7 +1,7 @@
 module LDLFactorizations
 
 
-export ldl, \, ldiv!, ldl_solve!
+export ldl, \, ldiv!
 
 
 using AMD, LinearAlgebra, SparseArrays
