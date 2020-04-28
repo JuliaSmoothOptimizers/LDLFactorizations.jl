@@ -286,7 +286,6 @@ function ldl_solve!(n, b, Lp, Li, Lx, D, P)
   ldl_lsolve!(n, y, Lp, Li, Lx)
   ldl_dsolve!(n, y, D)
   ldl_ltsolve!(n, y, Lp, Li, Lx)
-  @views b[P] = y
   return b
 end
 
