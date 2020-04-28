@@ -1,6 +1,6 @@
 using LDLFactorizations, Test, LinearAlgebra, SparseArrays
 
-# this matrix possesses an LDL factorization without pivoting
+# this matrix possesses an LDLᵀ factorization without pivoting
 A = [ 1.7     0     0     0     0     0     0     0   .13     0
         0    1.     0     0   .02     0     0     0     0   .01
         0     0   1.5     0     0     0     0     0     0     0
@@ -25,13 +25,16 @@ y = collect(0.1:0.1:1)
 
 x2 = copy(b)
 ldl_solve!(length(b), x2, LDLT.L.colptr, LDLT.L.rowval, LDLT.L.nzval, LDLT.D, LDLT.P)
+ldiv!(LDLT, x2)
+
 
 r2 = A * x2 - b
 @test norm(r2) ≤ ϵ * norm(b)
 
 @test norm(x2 - y) ≤ ϵ * norm(y)
 
-# this matrix does not possess an LDL factorization without pivoting
+
+# this matrix does not possess an LDLᵀ factorization without pivoting
 A = [ 0 1
       1 1 ]
 @test_throws LDLFactorizations.SQDException ldl(A, [1, 2])
@@ -48,6 +51,15 @@ for Ti in (Int32, Int), Tf in (Float32, Float64, BigFloat)
   x2 = copy(b)
   ldl_solve!(length(b), x2, LDLT.L.colptr, LDLT.L.rowval, LDLT.L.nzval, LDLT.D, LDLT.P)
   r2 = A * x2 - b
+  @test norm(r2) ≤ sqrt(eps(Tf)) * norm(b)
+
+  ldiv!(LDLT, x2)
+  r2 = A * x2 - b
+  @test norm(r2) ≤ sqrt(eps(Tf)) * norm(b)
+
+  y = similar(b)
+  ldiv!(y, LDLT, b)
+  r2 = A * y - b
   @test norm(r2) ≤ sqrt(eps(Tf)) * norm(b)
 end
 
@@ -79,12 +91,15 @@ y = collect(0.1:0.1:1)
 x2 = copy(b)
 ldl_solve!(length(b), x2, LDLT_upper.L.colptr, LDLT_upper.L.rowval, LDLT_upper.L.nzval, LDLT.D, LDLT.P)
 
+ldiv!(LDLT, x2)
+
 r2 = A * x2 - b
 @test norm(r2) ≤ ϵ * norm(b)
 
 @test norm(x2 - y) ≤ ϵ * norm(y)
 
-# this matrix does not possess an LDL factorization without pivoting
+
+# this matrix does not possess an LDLᵀ factorization without pivoting
 A = triu([ 0 1
            1 1 ])
 @test_throws LDLFactorizations.SQDException ldl(A, [1, 2], upper = true)
@@ -101,6 +116,9 @@ for Ti in (Int32, Int), Tf in (Float32, Float64, BigFloat)
 
   x2 = copy(b)
   ldl_solve!(length(b), x2, LDLT.L.colptr, LDLT.L.rowval, LDLT.L.nzval, LDLT.D, LDLT.P)
+
+  ldiv!(LDLT, x2)
+
   r2 = A * x2 - b
   @test norm(r2) ≤ sqrt(eps(Tf)) * norm(b)
 end

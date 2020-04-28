@@ -1,6 +1,8 @@
 module LDLFactorizations
 
-export ldl, \, ldl_solve!
+
+export ldl, \, ldiv!, ldl_solve!
+
 
 using AMD, LinearAlgebra, SparseArrays
 
@@ -40,7 +42,7 @@ end
 
 """
     col_num!(n, Ap, Ai, Cp, w, Pinv)
-Compute the rowval and values of missing elements of the upper triangle of PAPt. Nonzero elements have to verify Pinv[i] >= Pinv[j] where i is the
+Compute the rowval and values of missing elements of the upper triangle of PAPt. Nonzero elements have to verify Pinv[i] ≥ Pinv[j] where i is the
 row index and j the column index. Those elements are the nonzeros of the lower triangle of A that will be in the upper triangle of PAPt (after permutation)
 # Arguments
 - `n::Ti`: number of columns of the matrix
@@ -289,7 +291,7 @@ function ldl_solve!(n, b, Lp, Li, Lx, D, P)
   return b
 end
 
-# a simplistic type for LDL' factorizations so we can do \
+# a simplistic type for LDLᵀ factorizations so we can do \
 mutable struct LDLFactorization{T<:Real,Ti<:Integer}
   L::SparseMatrixCSC{T,Ti}
   D::Vector{T}
@@ -355,7 +357,16 @@ function ldl(A::SparseMatrixCSC{T,Ti}, P::Vector{Ti}; upper = false) where {T<:R
 end
 
 import Base.(\)
-(\)(LDL::LDLFactorization{T,Ti}, b::AbstractVector{T}) where {T<:Real,Ti<:Integer} =
+@inline (\)(LDL::LDLFactorization{T,Ti}, b::AbstractVector{T}) where {T<:Real,Ti<:Integer} =
   ldl_solve(LDL.L.n, b, LDL.L.colptr, LDL.L.rowval, LDL.L.nzval, LDL.D, LDL.P)
+
+import LinearAlgebra.ldiv!
+@inline ldiv!(LDL::LDLFactorization{T,Ti}, b::AbstractVector{T}) where {T<:Real,Ti<:Integer} =
+  ldl_solve!(LDL.L.n, b, LDL.L.colptr, LDL.L.rowval, LDL.L.nzval, LDL.D, LDL.P)
+
+function ldiv!(y::AbstractVector{T}, LDL::LDLFactorization{T,Ti}, b::AbstractVector{T}) where {T<:Real,Ti<:Integer}
+  y .= b
+  ldl_solve!(LDL.L.n, y, LDL.L.colptr, LDL.L.rowval, LDL.L.nzval, LDL.D, LDL.P)
+end
 
 end  # module
