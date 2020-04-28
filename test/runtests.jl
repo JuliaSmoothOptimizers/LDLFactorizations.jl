@@ -23,6 +23,7 @@ r = A * x - b
 y = collect(0.1:0.1:1)
 @test norm(x - y) ≤ ϵ * norm(y)
 
+x2 = copy(b)
 ldiv!(LDLT, x2)
 
 r2 = A * x2 - b
