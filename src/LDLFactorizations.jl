@@ -286,7 +286,6 @@ function ldl_solve!(n, b, Lp, Li, Lx, D, P)
   ldl_lsolve!(n, y, Lp, Li, Lx)
   ldl_dsolve!(n, y, D)
   ldl_ltsolve!(n, y, Lp, Li, Lx)
-  @views b[P] = y
   return b
 end
 
@@ -356,8 +355,10 @@ function ldl(A::SparseMatrixCSC{T,Ti}, P::Vector{Ti}; upper = false) where {T<:R
 end
 
 import Base.(\)
-@inline (\)(LDL::LDLFactorization{T,Ti}, b::AbstractVector{T}) where {T<:Real,Ti<:Integer} =
-  ldl_solve(LDL.L.n, b, LDL.L.colptr, LDL.L.rowval, LDL.L.nzval, LDL.D, LDL.P)
+function (\)(LDL::LDLFactorization{T,Ti}, b::AbstractVector{T}) where {T<:Real,Ti<:Integer}
+  y = copy(b)
+  ldl_solve!(LDL.L.n, y, LDL.L.colptr, LDL.L.rowval, LDL.L.nzval, LDL.D, LDL.P)
+end
 
 import LinearAlgebra.ldiv!
 @inline ldiv!(LDL::LDLFactorization{T,Ti}, b::AbstractVector{T}) where {T<:Real,Ti<:Integer} =
