@@ -371,7 +371,7 @@ end
 
 import SparseArrays.nnz
 function nnz(LDL::LDLFactorization{T,Ti}) where {T<:Real,Ti<:Integer}
-  return nnz(LDL.L) + nnz(LDL.D)
+  return nnz(LDL.L) + length(LDL.D)
 end
 
 end  # module
