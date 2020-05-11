@@ -369,4 +369,9 @@ function ldiv!(y::AbstractVector{T}, LDL::LDLFactorization{T,Ti}, b::AbstractVec
   ldl_solve!(LDL.L.n, y, LDL.L.colptr, LDL.L.rowval, LDL.L.nzval, LDL.D, LDL.P)
 end
 
+import SparseArrays.nnz
+function nnz(LDL::LDLFactorization{T,Ti}) where {T<:Real,Ti<:Integer}
+  return nnz(LDL.L) + nnz(LDL.D)
+end
+
 end  # module
