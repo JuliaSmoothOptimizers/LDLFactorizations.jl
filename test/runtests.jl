@@ -31,6 +31,8 @@ r2 = A * x2 - b
 
 @test norm(x2 - y) ≤ ϵ * norm(y)
 
+@test nnz(LDLT) == nnz(LDLT.L) + nnz(LDLT.D)
+
 # this matrix does not possess an LDLᵀ factorization without pivoting
 A = [ 0 1
       1 1 ]
@@ -54,6 +56,8 @@ for Ti in (Int32, Int), Tf in (Float32, Float64, BigFloat)
   ldiv!(y, LDLT, b)
   r2 = A * y - b
   @test norm(r2) ≤ sqrt(eps(Tf)) * norm(b)
+
+  @test nnz(LDLT) == nnz(LDLT.L) + nnz(LDLT.D)
 end
 
 # Using only the upper triangle tests
@@ -89,6 +93,8 @@ r2 = A * x2 - b
 
 @test norm(x2 - y) ≤ ϵ * norm(y)
 
+@test nnz(LDLT_upper) == nnz(LDLT_upper.L) + nnz(LDLT_upper.D)
+
 # this matrix does not possess an LDLᵀ factorization without pivoting
 A = triu([ 0 1
            1 1 ])
@@ -108,4 +114,6 @@ for Ti in (Int32, Int), Tf in (Float32, Float64, BigFloat)
   ldiv!(LDLT, x2)
   r2 = A * x2 - b
   @test norm(r2) ≤ sqrt(eps(Tf)) * norm(b)
+
+  @test nnz(LDLT) == nnz(LDLT.L) + nnz(LDLT.D)
 end
