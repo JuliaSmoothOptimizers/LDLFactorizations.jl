@@ -31,7 +31,12 @@ r2 = A * x2 - b
 
 @test norm(x2 - y) ≤ ϵ * norm(y)
 
-@test nnz(LDLT) == nnz(LDLT.L) + length(LDLT.D)
+# test properties
+@test eltype(LDLT) == eltype(A)
+@test nnz(LDLT) == nnz(LDLT.L) + length(LDLT.d)
+@test size(LDLT) == size(A)
+@test typeof(LDLT.D) <: Diagonal
+@test propertynames(LDLT) == (:L, :D, :P)
 
 # this matrix does not possess an LDLᵀ factorization without pivoting
 A = [ 0 1
@@ -57,7 +62,7 @@ for Ti in (Int32, Int), Tf in (Float32, Float64, BigFloat)
   r2 = A * y - b
   @test norm(r2) ≤ sqrt(eps(Tf)) * norm(b)
 
-  @test nnz(LDLT) == nnz(LDLT.L) + length(LDLT.D)
+  @test nnz(LDLT) == nnz(LDLT.L) + length(LDLT.d)
 end
 
 # Using only the upper triangle tests
@@ -93,7 +98,7 @@ r2 = A * x2 - b
 
 @test norm(x2 - y) ≤ ϵ * norm(y)
 
-@test nnz(LDLT_upper) == nnz(LDLT_upper.L) + length(LDLT_upper.D)
+@test nnz(LDLT_upper) == nnz(LDLT_upper.L) + length(LDLT_upper.d)
 
 # test with a permutation of a different int type
 p = Int32.(collect(size(A,1):-1:1))
@@ -134,6 +139,6 @@ for Ti in (Int32, Int), Tf in (Float32, Float64, BigFloat)
   r2 = A * x2 - b
   @test norm(r2) ≤ sqrt(eps(Tf)) * norm(b)
 
-  @test nnz(LDLT) == nnz(LDLT.L) + length(LDLT.D)
+  @test nnz(LDLT) == nnz(LDLT.L) + length(LDLT.d)
 end
 
