@@ -95,6 +95,25 @@ r2 = A * x2 - b
 
 @test nnz(LDLT_upper) == nnz(LDLT_upper.L) + length(LDLT_upper.D)
 
+# test with a permutation of a different int type
+p = Int32.(collect(size(A,1):-1:1))
+LDLT_upper = ldl(A_upper, p, upper = true)
+x = LDLT_upper \ b
+
+r = A * x - b
+@test norm(r) ≤ ϵ * norm(b)
+
+y = collect(0.1:0.1:1)
+@test norm(x - y) ≤ ϵ * norm(y)
+
+x2 = copy(b)
+ldiv!(LDLT, x2)
+
+r2 = A * x2 - b
+@test norm(r2) ≤ ϵ * norm(b)
+
+@test norm(x2 - y) ≤ ϵ * norm(y)
+
 # this matrix does not possess an LDLᵀ factorization without pivoting
 A = triu([ 0 1
            1 1 ])
@@ -117,3 +136,4 @@ for Ti in (Int32, Int), Tf in (Float32, Float64, BigFloat)
 
   @test nnz(LDLT) == nnz(LDLT.L) + length(LDLT.D)
 end
+
