@@ -290,9 +290,12 @@ function ldl_solve!(n, b, Lp, Li, Lx, D, P)
 end
 
 # a simplistic type for LDLᵀ factorizations so we can do \
-mutable struct LDLFactorization{T<:Real,Ti<:Integer,Tp<:Integer}
-  L::SparseMatrixCSC{T,Ti}
-  D::Vector{T}
+mutable struct LDLFactorization{T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
+  n::Tn
+  Lp::Vector{Ti}
+  Li::Vector{Ti}
+  Lx::Vector{T}
+  d::Vector{T}
   P::Vector{Tp}
 end
 
@@ -351,27 +354,40 @@ function ldl(A::SparseMatrixCSC{T,Ti}, P::Vector{Tp}; upper = false) where {T<:R
     ldl_numeric!(n, A.colptr, A.rowval, A.nzval, Lp, parent, Lnz, Li, Lx, D, Y, pattern, flag, P, pinv)
   end
 
-  return LDLFactorization(SparseMatrixCSC{T,Ti}(n, n, Lp, Li, Lx), D, P)
+  return LDLFactorization(n, Lp, Li, Lx, D, P)
 end
 
 import Base.(\)
 function (\)(LDL::LDLFactorization{T,Ti}, b::AbstractVector{T}) where {T<:Real,Ti<:Integer}
   y = copy(b)
-  ldl_solve!(LDL.L.n, y, LDL.L.colptr, LDL.L.rowval, LDL.L.nzval, LDL.D, LDL.P)
+  ldl_solve!(LDL.n, y, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
 end
 
 import LinearAlgebra.ldiv!
 @inline ldiv!(LDL::LDLFactorization{T,Ti}, b::AbstractVector{T}) where {T<:Real,Ti<:Integer} =
-  ldl_solve!(LDL.L.n, b, LDL.L.colptr, LDL.L.rowval, LDL.L.nzval, LDL.D, LDL.P)
+  ldl_solve!(LDL.n, b, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
 
 function ldiv!(y::AbstractVector{T}, LDL::LDLFactorization{T,Ti}, b::AbstractVector{T}) where {T<:Real,Ti<:Integer}
   y .= b
-  ldl_solve!(LDL.L.n, y, LDL.L.colptr, LDL.L.rowval, LDL.L.nzval, LDL.D, LDL.P)
+  ldl_solve!(LDL.n, y, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
 end
 
-import SparseArrays.nnz
-function nnz(LDL::LDLFactorization{T,Ti}) where {T<:Real,Ti<:Integer}
-  return nnz(LDL.L) + length(LDL.D)
+Base.eltype(LDL::LDLFactorization) = eltype(LDL.d)
+Base.size(LDL::LDLFactorization) = (LDL.n, LDL.n)
+SparseArrays.nnz(LDL::LDLFactorization) = length(LDL.Lx) + length(LDL.d)
+
+# user-friendly factors
+@inline function Base.getproperty(LDL::LDLFactorization, prop::Symbol)
+  if prop == :L
+    # TODO: permute and return UnitLowerTriangular()
+    return SparseMatrixCSC(LDL.n, LDL.n, LDL.Lp, LDL.Li, LDL.Lx)
+  elseif prop == :D
+    return Diagonal(LDL.d)
+  else
+    getfield(LDL, prop)
+  end
 end
+
+Base.propertynames(LDL::LDLFactorization) = (:L, :D, :P)
 
 end  # module
