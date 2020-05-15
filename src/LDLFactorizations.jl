@@ -290,10 +290,10 @@ function ldl_solve!(n, b, Lp, Li, Lx, D, P)
 end
 
 # a simplistic type for LDLᵀ factorizations so we can do \
-mutable struct LDLFactorization{T<:Real,Ti<:Integer}
+mutable struct LDLFactorization{T<:Real,Ti<:Integer,Tp<:Integer}
   L::SparseMatrixCSC{T,Ti}
   D::Vector{T}
-  P::Vector{Ti}
+  P::Vector{Tp}
 end
 
 # use AMD permutation by default
@@ -307,7 +307,7 @@ function ldl(sA::Symmetric{T,SparseMatrixCSC{T,Ti}}, args...) where {T<:Real,Ti<
 end
 
 # use ldl(A, collect(1:n)) to suppress permutation
-function ldl(A::SparseMatrixCSC{T,Ti}, P::Vector{Ti}; upper = false) where {T<:Real,Ti<:Integer}
+function ldl(A::SparseMatrixCSC{T,Ti}, P::Vector{Tp}; upper = false) where {T<:Real,Ti<:Integer,Tp<:Integer}
   n = size(A, 1)
   n == size(A, 2) || throw(DimensionMismatch("matrix must be square"))
   n == length(P) || throw(DimensionMismatch("permutation size mismatch"))
@@ -316,7 +316,7 @@ function ldl(A::SparseMatrixCSC{T,Ti}, P::Vector{Ti}; upper = false) where {T<:R
   parent = Vector{Ti}(undef, n)
   Lnz = Vector{Ti}(undef, n)
   flag = Vector{Ti}(undef, n)
-  pinv = Vector{Ti}(undef, n)
+  pinv = Vector{Tp}(undef, n)
   Lp = Vector{Ti}(undef, n+1)
 
   # Compute inverse permutation
