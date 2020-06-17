@@ -39,20 +39,18 @@ function col_symb!(n, Ap, Ai, Cp, w, Pinv)
 end
 
 """
-    col_num!(n, Ap, Ai, Cp, w, Pinv)
+    col_num!(n, Ap, Ai, w, Pinv)
 Compute the rowval and values of missing elements of the upper triangle of PAPt. Nonzero elements have to verify Pinv[i] ≥ Pinv[j] where i is the
 row index and j the column index. Those elements are the nonzeros of the lower triangle of A that will be in the upper triangle of PAPt (after permutation)
 # Arguments
 - `n::Ti`: number of columns of the matrix
 - `Ap::Vector{Ti}`: colptr of the matrix to factorize (CSC format)
 - `Ai::Vector{Ti}`: rowval of the matrix to factorize (CSC format)
-- `Ax::Vector{Ti}`: values of the matrix to factorize (CSC format)
-- `Cp::Vector{Ti}`: colptr of the lower triangle
 - `Ci::Vector{Ti}`: rowval of the lower triangle
 - `w::Vector{Ti}`: work array
 - `Pinv::Vector{Ti}`: inverse permutation of P. PAPt is the matrix to factorize (CSC format)
 """
-function col_num!(n, Ap, Ai, Ax, Cp, Ci, w, Pinv)
+function col_num!(n, Ap, Ai, Ci, w, Pinv)
   @inbounds for j = 1:n
     @inbounds for p = Ap[j] : (Ap[j+1]-1)
       i = Ai[p]
@@ -363,7 +361,7 @@ function ldl(A::SparseMatrixCSC{T,Ti}, P::Vector{Tp}; upper = false) where {T<:R
     Cp = Vector{Ti}(undef, n + 1)
     col_symb!(n, A.colptr, A.rowval, Cp, Lp, pinv)
     Ci = Vector{Ti}(undef, Cp[end] - 1)
-    col_num!(n, A.colptr, A.rowval, A.nzval, Cp, Ci, Lp, pinv)
+    col_num!(n, A.colptr, A.rowval, Ci, Lp, pinv)
 
     # perform symbolic analysis
     ldl_symbolic_upper!(n, A.colptr, A.rowval, Cp, Ci, Lp, parent, Lnz, flag, P, pinv)
