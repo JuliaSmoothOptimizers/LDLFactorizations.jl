@@ -28,4 +28,7 @@ branches:
     - master
 
 after_success:
-  - julia -e 'cd(Pkg.dir("LDLFactorizations")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'
+  - julia -e 'if Sys.islinux() && string(VERSION)[1:3] == "1.4"
+      using Pkg; Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder()); Codecov.submit(process_folder())
+    end'
+
