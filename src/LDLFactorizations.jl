@@ -243,7 +243,8 @@ function ldl_numeric!(n, Ap, Ai, Ax, Lp, parent, Lnz, Li, Lx, D, Y,
   end
 end
 
-function ldl_lsolve!(n, x, Lp, Li, Lx)
+# solve functions for a single rhs
+function ldl_lsolve!(n, x::AbstractVector, Lp, Li, Lx)
   @inbounds for j = 1:n
     xj = x[j]
     @inbounds for p = Lp[j] : (Lp[j+1] - 1)
@@ -253,14 +254,14 @@ function ldl_lsolve!(n, x, Lp, Li, Lx)
   return x
 end
 
-function ldl_dsolve!(n, x, D)
+function ldl_dsolve!(n, x::AbstractVector, D)
   @inbounds for j = 1:n
     x[j] /= D[j]
   end
   return x
 end
 
-function ldl_ltsolve!(n, x, Lp, Li, Lx)
+function ldl_ltsolve!(n, x::AbstractVector, Lp, Li, Lx)
   @inbounds for j = n:-1:1
     xj = x[j]
     @inbounds for p = Lp[j] : (Lp[j+1] - 1)
@@ -271,7 +272,7 @@ function ldl_ltsolve!(n, x, Lp, Li, Lx)
   return x
 end
 
-function ldl_solve(n, b, Lp, Li, Lx, D, P)
+function ldl_solve(n, b::AbstractVector, Lp, Li, Lx, D, P)
   y = b[P]
   ldl_lsolve!(n, y, Lp, Li, Lx)
   ldl_dsolve!(n, y, D)
@@ -281,13 +282,60 @@ function ldl_solve(n, b, Lp, Li, Lx, D, P)
   return x
 end
 
-function ldl_solve!(n, b, Lp, Li, Lx, D, P)
+function ldl_solve!(n, b::AbstractVector, Lp, Li, Lx, D, P)
   @views y = b[P]
   ldl_lsolve!(n, y, Lp, Li, Lx)
   ldl_dsolve!(n, y, D)
   ldl_ltsolve!(n, y, Lp, Li, Lx)
   return b
 end
+
+# solve functions for multiple rhs
+function ldl_lsolve!(n, X::AbstractMatrix{T}, Lp, Li, Lx) where T
+  @inbounds for j = 1:n
+    @views Xj = X[j, :]
+    @inbounds for p = Lp[j] : (Lp[j+1] - 1)
+      X[Li[p], :] .-= Lx[p] * Xj
+    end
+  end
+  return X
+end
+
+function ldl_dsolve!(n, X::AbstractMatrix{T}, D) where T
+  @inbounds for j = 1:n
+    X[j, :] /= D[j]
+  end
+  return X
+end
+
+function ldl_ltsolve!(n, X::AbstractMatrix{T}, Lp, Li, Lx) where T
+  @inbounds for j = n:-1:1
+    @views Xj = X[j, :]
+    @inbounds for p = Lp[j] : (Lp[j+1] - 1)
+      @views Xj .-= Lx[p] * X[Li[p], :]
+    end
+  end
+  return X
+end
+
+function ldl_solve(n, B::AbstractMatrix{T}, Lp, Li, Lx, D, P) where T
+  Y = B[P, :]
+  ldl_lsolve!(n, Y, Lp, Li, Lx)
+  ldl_dsolve!(n, Y, D)
+  ldl_ltsolve!(n, Y, Lp, Li, Lx)
+  X = similar(B)
+  X[P, :] .= Y
+  return X
+end
+
+function ldl_solve!(n, B::AbstractMatrix{T}, Lp, Li, Lx, D, P) where T
+  @views Y = B[P, :]
+  ldl_lsolve!(n, Y, Lp, Li, Lx)
+  ldl_dsolve!(n, Y, D)
+  ldl_ltsolve!(n, Y, Lp, Li, Lx)
+  return B
+end
+
 
 # a simplistic type for LDLᵀ factorizations so we can do \
 mutable struct LDLFactorization{T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
@@ -363,13 +411,26 @@ function (\)(LDL::LDLFactorization{T,Ti}, b::AbstractVector{T}) where {T<:Real,T
   ldl_solve!(LDL.n, y, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
 end
 
+function (\)(LDL::LDLFactorization{T,Ti}, B::AbstractMatrix{T}) where {T<:Real,Ti<:Integer}
+  Y = copy(B)
+  ldl_solve!(LDL.n, Y, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
+end
+
 import LinearAlgebra.ldiv!
 @inline ldiv!(LDL::LDLFactorization{T,Ti}, b::AbstractVector{T}) where {T<:Real,Ti<:Integer} =
   ldl_solve!(LDL.n, b, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
 
+@inline ldiv!(LDL::LDLFactorization{T,Ti}, B::AbstractMatrix{T}) where {T<:Real,Ti<:Integer} =
+  ldl_solve!(LDL.n, B, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
+
 function ldiv!(y::AbstractVector{T}, LDL::LDLFactorization{T,Ti}, b::AbstractVector{T}) where {T<:Real,Ti<:Integer}
   y .= b
   ldl_solve!(LDL.n, y, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
+end
+
+function ldiv!(Y::AbstractMatrix{T}, LDL::LDLFactorization{T,Ti}, B::AbstractMatrix{T}) where {T<:Real,Ti<:Integer}
+  Y .= B
+  ldl_solve!(LDL.n, Y, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
 end
 
 Base.eltype(LDL::LDLFactorization) = eltype(LDL.d)
