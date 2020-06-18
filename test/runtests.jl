@@ -119,6 +119,13 @@ r2 = A * x2 - b
 
 @test norm(x2 - y) ≤ ϵ * norm(y)
 
+# Tests with multiple right-hand sides
+B = 1.0 * [ i + j for j = 1 : 10, i = 0 : 3]
+X = A \ B
+Y = similar(B)
+ldiv!(Y, LDLT, B)
+@test norm(Y - X) ≤ ϵ * norm(X)
+
 # this matrix does not possess an LDLᵀ factorization without pivoting
 A = triu([ 0 1
            1 1 ])
