@@ -1,11 +1,14 @@
 # LDLFactorizations: Factorization of Symmetric Matrices
 
+A translation of Tim Davis's Concise LDLᵀ Factorization, part of [SuiteSparse](http://faculty.cse.tamu.edu/davis/suitesparse.html) with several improvements.
+
+Please cite this repository if you use LDLFactorizations.jl in your work: see [`CITATION.bib`](https://github.com/JuliaSmoothOptimizers/LDLFactorizations.jl/blob/master/CITATION.bib).
+
+[![DOI](https://zenodo.org/badge/98073166.svg)](https://zenodo.org/badge/latestdoi/98073166)
 [![Build Status](https://travis-ci.org/JuliaSmoothOptimizers/LDLFactorizations.jl.svg?branch=master)](https://travis-ci.org/JuliaSmoothOptimizers/LDLFactorizations.jl)
 [![Build status](https://ci.appveyor.com/api/projects/status/eyyrgo7qg7uxbvxm/branch/master?svg=true)](https://ci.appveyor.com/project/dpo/ldlfactorizations-jl/branch/master)
 [![Build Status](https://api.cirrus-ci.com/github/JuliaSmoothOptimizers/LDLFactorizations.jl.svg)](https://cirrus-ci.com/github/JuliaSmoothOptimizers/LDLFactorizations.jl)
 [![Coverage Status](https://coveralls.io/repos/github/JuliaSmoothOptimizers/LDLFactorizations.jl/badge.svg)](https://coveralls.io/github/JuliaSmoothOptimizers/LDLFactorizations.jl)
-
-A translation of Tim Davis's Concise LDLᵀ Factorization, part of [SuiteSparse](http://faculty.cse.tamu.edu/davis/suitesparse.html).
 
 This package is appropriate for matrices A that possess a factorization of the
 form LDLᵀ without pivoting, where L is unit lower triangular and D is *diagonal* (indefinite in general), including definite and quasi-definite matrices.
