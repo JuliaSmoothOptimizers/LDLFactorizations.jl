@@ -20,13 +20,6 @@ common_plot_args = Dict{Symbol,Any}(
 )
 Plots.default(; common_plot_args...)
 
-function save_stats(stats::Dict{Symbol,DataFrame}, filename::AbstractString; force::Bool=false, key::String="stats")
-  isfile(filename) && !force && error("$filename already exists; use `force=true` to overwrite")
-  jldopen(filename, "w") do file
-    file[key] = stats
-  end
-end
-
 # perform benchmarks
 results = PkgBenchmark.benchmarkpkg("LDLFactorizations", script="benchmark/sqd_bmark.jl")
 stats = bmark_results_to_dataframes(results)
@@ -34,5 +27,6 @@ save_stats(stats, "ldl_vs_qdldl.jld2")
 
 # process benchmark results and post gist
 p = profile_solvers(results)
+savefig("LDLFactorizations_benchmark.svg")
 posted_gist = to_gist(results, p)
 println(posted_gist.html_url)
