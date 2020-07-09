@@ -22,8 +22,8 @@ const iters = (0, 5, 10)
 
 const SUITE = BenchmarkGroup()
 SUITE["fact"] = BenchmarkGroup()
-SUITE["1solve"] = BenchmarkGroup()
-SUITE["5solve"] = BenchmarkGroup()
+SUITE["solve1"] = BenchmarkGroup()
+SUITE["solve5"] = BenchmarkGroup()
 
 for subdir ∈ subdirs
   subdir == ".git" && continue
@@ -39,9 +39,9 @@ for subdir ∈ subdirs
       SUITE["fact"][name] = @benchmarkable ldl($A)
       LDL = ldl(A)
       x = similar(b)
-      SUITE["1solve"][name] = @benchmarkable ldiv!($x, $LDL, $b)
+      SUITE["solve1"][name] = @benchmarkable ldiv!($x, $LDL, $b)
       X = similar(B)
-      SUITE["5solve"][name] = @benchmarkable ldiv!($X, $LDL, $B)
+      SUITE["solve5"][name] = @benchmarkable ldiv!($X, $LDL, $B)
     end
   end
 end
