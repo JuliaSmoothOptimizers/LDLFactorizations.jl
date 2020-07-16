@@ -42,7 +42,9 @@ solve5_stats = Dict{Symbol,DataFrame}(:commit => commit_stats[:solve5],
 save_stats(fact_stats, "ldl_commit_vs_master_fact.jld2")
 save_stats(solve1_stats, "ldl_commit_vs_master_solve1.jld2")
 save_stats(solve5_stats, "ldl_commit_vs_master_solve5.jld2")
-save_stats(judgement_stats, "ldl_commit_vs_master_judgement.jld2")
+jldopen("ldl_commit_vs_master_judgement.jld2", "w") do file
+  file["jstats"] = judgement_stats
+end
 
 export_markdown("judgement.md", judgement)
 export_markdown("master.md", master)
