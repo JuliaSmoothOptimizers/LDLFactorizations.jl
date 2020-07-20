@@ -272,16 +272,6 @@ function ldl_ltsolve!(n, x::AbstractVector, Lp, Li, Lx)
   return x
 end
 
-function ldl_solve(n, b::AbstractVector, Lp, Li, Lx, D, P)
-  y = b[P]
-  ldl_lsolve!(n, y, Lp, Li, Lx)
-  ldl_dsolve!(n, y, D)
-  ldl_ltsolve!(n, y, Lp, Li, Lx)
-  x = similar(b)
-  x[P] = y
-  return x
-end
-
 function ldl_solve!(n, b::AbstractVector, Lp, Li, Lx, D, P)
   @views y = b[P]
   ldl_lsolve!(n, y, Lp, Li, Lx)
@@ -293,9 +283,10 @@ end
 # solve functions for multiple rhs
 function ldl_lsolve!(n, X::AbstractMatrix{T}, Lp, Li, Lx) where T
   @inbounds for j = 1:n
-    @views Xj = X[j, :]
     @inbounds for p = Lp[j] : (Lp[j+1] - 1)
-      X[Li[p], :] .-= Lx[p] * Xj
+      for k ∈ axes(X, 2)
+        X[Li[p], k] -= Lx[p] * X[j, k]
+      end
     end
   end
   return X
@@ -303,28 +294,21 @@ end
 
 function ldl_dsolve!(n, X::AbstractMatrix{T}, D) where T
   @inbounds for j = 1:n
-    X[j, :] /= D[j]
+    for k ∈ axes(X, 2)
+      X[j, k] /= D[j]
+    end
   end
   return X
 end
 
 function ldl_ltsolve!(n, X::AbstractMatrix{T}, Lp, Li, Lx) where T
   @inbounds for j = n:-1:1
-    @views Xj = X[j, :]
     @inbounds for p = Lp[j] : (Lp[j+1] - 1)
-      @views Xj .-= Lx[p] * X[Li[p], :]
+      for k ∈ axes(X, 2)
+        X[j, k] -= Lx[p] * X[Li[p], k]
+      end
     end
   end
-  return X
-end
-
-function ldl_solve(n, B::AbstractMatrix{T}, Lp, Li, Lx, D, P) where T
-  Y = B[P, :]
-  ldl_lsolve!(n, Y, Lp, Li, Lx)
-  ldl_dsolve!(n, Y, D)
-  ldl_ltsolve!(n, Y, Lp, Li, Lx)
-  X = similar(B)
-  X[P, :] .= Y
   return X
 end
 
