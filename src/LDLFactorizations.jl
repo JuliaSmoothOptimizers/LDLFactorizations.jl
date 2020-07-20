@@ -303,16 +303,15 @@ end
 
 function ldl_dsolve!(n, X::AbstractMatrix{T}, D) where T
   @inbounds for j = 1:n
-    X[j, :] /= D[j]
+    X[j, :] ./= D[j]
   end
   return X
 end
 
 function ldl_ltsolve!(n, X::AbstractMatrix{T}, Lp, Li, Lx) where T
   @inbounds for j = n:-1:1
-    @views Xj = X[j, :]
     @inbounds for p = Lp[j] : (Lp[j+1] - 1)
-      @views Xj .-= Lx[p] * X[Li[p], :]
+      X[j, :] .-= Lx[p] * view(X, Li[p], :)
     end
   end
   return X
