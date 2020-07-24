@@ -37,8 +37,10 @@ for subdir ∈ subdirs
       b = readdlm(joinpath(iterpath, "rhs_$(iter).rhs"))[:, 1]
       B = [b b b b b]
       name = "$(subdir)_$(formulation)_$(iter)"
-      SUITE["fact"][name] = @benchmarkable ldl($A)
-      LDL = ldl(A)
+      SUITE["analyze"][name] = @benchmarkable ldl_analyze($A)
+      LDL = ldl_analyze(A)
+      SUITE["factorize"][name] = @benchmarkable ldl_factorize!($A, $LDL)
+      ldl_factorize!(A, LDL)
       x = similar(b)
       SUITE["solve1"][name] = @benchmarkable ldiv!($x, $LDL, $b)
       X = similar(B)
