@@ -21,21 +21,6 @@ using Plots
 
 using SolverBenchmark
 
-pyplot()
-using PlotThemes
-theme(:wong)
-
-common_plot_args = Dict{Symbol,Any}(
-  :linewidth => 2,
-  :alpha => .75,
-  :titlefontsize => 8,
-  :legendfontsize => 8,
-  :xtickfontsize => 6,
-  :ytickfontsize => 6,
-  :guidefontsize => 8,
-)
-Plots.default(; common_plot_args...)
-
 # NB: benchmarkpkg will run benchmarks/benchmarks.jl by default
 commit = benchmarkpkg("LDLFactorizations")  # current state of repository
 master = benchmarkpkg("LDLFactorizations", "master")
@@ -91,7 +76,7 @@ json_dict = Dict{String,Any}("description" => "LDLFactorization repository bench
                              "public" => true,
                              "files" => files_dict)
 
-# Need to add GITHUB_AUTH to your .bashrc
-myauth = GitHub.authenticate(ENV["GITHUB_AUTH"])
-posted_gist = create_gist(params = json_dict, auth = myauth)
-println(posted_gist.html_url)
+open("gist.json", "w") do f
+    JSON.print(f, json_dict)
+end
+
