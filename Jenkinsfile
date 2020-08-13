@@ -1,7 +1,8 @@
+def bmarkFile = 'benchmarks.jl'
 pipeline {
   agent any
   environment {
-    julia = "/opt/julia/bin/julia"
+    REPO_EXISTS = fileExists "$repo"
   }
   options {
     skipDefaultCheckout true
@@ -48,7 +49,7 @@ pipeline {
 
      causeString: 'Triggered on $comment',
 
-     token: 'foobar',
+     token: "LDLFactorizations",
 
      printContributedVariables: true,
      printPostContent: true,
@@ -56,45 +57,59 @@ pipeline {
      silentResponse: false,
 
      regexpFilterText: '$comment',
-     regexpFilterExpression: 'runbenchmarks'
+     regexpFilterExpression: '@JSOBot runbenchmarks'
     )
   }
   stages {
+    stage('clone repo') {
+      when {
+        expression { REPO_EXISTS == 'false' }
+      }
+      steps {
+        sh 'git clone https://${GITHUB_AUTH}@github.com/$org/$repo.git'
+      }
+    }
     stage('checkout on new branch') {
       steps {
-        sh '''
-        git fetch --no-tags origin '+refs/heads/master:refs/remotes/origin/master'
-        git branch benchmark
-        git checkout benchmark
-        '''
+        dir(WORKSPACE + "/$repo") {
+          sh '''
+          git checkout $BRANCH_NAME
+          git clean -fd
+          git pull
+          git fetch --no-tags origin '+refs/heads/master:refs/remotes/origin/master'
+          git checkout -b benchmark
+          '''    
+        }   
       }
     }
     stage('run benchmarks') {
       steps {
-        sh '''
-        set -x
-        julia benchmark/send_comment_to_pr.jl -o $org -r $repo -p $pullrequest -c "Starting benchmarks!"
-        julia benchmark/krylov_CI.jl
-        '''
+        script {
+          def data = env.comment.tokenize(' ')
+          if (data.size() > 2) {
+            bmarkFile = data.get(2);
+          }
+        }
+        dir(WORKSPACE + "/$repo") {
+          sh "set -x"
+          sh "qsub -N $repo_$pullrequest -V -cwd -o $HOME/benchmarks/bmark_output.log -e $HOME/benchmarks/bmark_error.log push_benchmarks.sh $bmarkFile"
+        }   
       }
     }
   }
   post {
     success {
-      echo "BUILD SUCCESS"
-      sh 'julia benchmark/send_comment_to_pr.jl -o $org -r $repo -p $pullrequest -g'
-    }
-    failure {
-      echo "BUILD FAILURE"
-      sh 'julia benchmark/send_comment_to_pr.jl -o $org -r $repo -p $pullrequest -c "An error has occured while running the benchmarks"'
+      echo "SUCCESS!"  
     }
     cleanup {
-
-      sh '''
-      git checkout master
-      git branch -D benchmark
-      rm -f gist.json
-      '''
+      dir(WORKSPACE + "/$repo") {
+        sh 'printenv'
+        sh 'git checkout ' + BRANCH_NAME
+        sh '''
+        git branch -D benchmark
+        git clean -fd
+        '''
+      }
     }
   }
 }

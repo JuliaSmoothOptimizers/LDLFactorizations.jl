@@ -3,7 +3,6 @@ Pkg.activate("./benchmark/")
 Pkg.instantiate()
 
 using ArgParse
-using Git
 using GitHub
 using Printf
 using JSON
