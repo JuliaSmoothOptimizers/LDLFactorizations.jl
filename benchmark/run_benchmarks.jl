@@ -1,3 +1,11 @@
+using Pkg
+bmark_dir = @__DIR__
+print(bmark_dir)
+Pkg.activate(bmark_dir)
+Pkg.develop(PackageSpec(url=joinpath(bmark_dir, ".."))) 
+Pkg.instantiate()
+
+
 using DataFrames
 using GitHub
 using JLD2

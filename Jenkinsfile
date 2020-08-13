@@ -48,7 +48,7 @@ pipeline {
 
      causeString: 'Triggered on $comment',
 
-     token: 'foobar',
+     token: 'poc_jenkins_julia',
 
      printContributedVariables: true,
      printPostContent: true,
@@ -60,12 +60,17 @@ pipeline {
     )
   }
   stages {
+    stage('pull from repository') {
+      steps {
+        sh 'git checkout ' + BRANCH_NAME
+        sh 'git pull'
+      }
+    }
     stage('checkout on new branch') {
       steps {
         sh '''
         git fetch --no-tags origin '+refs/heads/master:refs/remotes/origin/master'
-        git branch benchmark
-        git checkout benchmark
+        git checkout -b benchmark
         '''
       }
     }
@@ -74,7 +79,7 @@ pipeline {
         sh '''
         set -x
         julia benchmark/send_comment_to_pr.jl -o $org -r $repo -p $pullrequest -c "Starting benchmarks!"
-        julia benchmark/krylov_CI.jl
+        julia benchmark/run_benchmarks.jl
         '''
       }
     }
@@ -89,11 +94,11 @@ pipeline {
       sh 'julia benchmark/send_comment_to_pr.jl -o $org -r $repo -p $pullrequest -c "An error has occured while running the benchmarks"'
     }
     cleanup {
-
+      sh 'printenv'
+      sh 'git checkout ' + BRANCH_NAME
       sh '''
-      git checkout master
       git branch -D benchmark
-      rm -f gist.json
+      git clean -fd
       '''
     }
   }
