@@ -1,6 +1,6 @@
 module LDLFactorizations
 
-export ldl, \, ldiv!, nnz
+export ldl, ldl_analyze, ldl_factorize!, \, ldiv!, nnz
 
 using AMD, LinearAlgebra, SparseArrays
 
@@ -39,20 +39,19 @@ function col_symb!(n, Ap, Ai, Cp, w, Pinv)
 end
 
 """
-    col_num!(n, Ap, Ai, Cp, w, Pinv)
+    col_num!(n, Ap, Ai, Ci, w, Pinv)
+    
 Compute the rowval and values of missing elements of the upper triangle of PAPt. Nonzero elements have to verify Pinv[i] ≥ Pinv[j] where i is the
 row index and j the column index. Those elements are the nonzeros of the lower triangle of A that will be in the upper triangle of PAPt (after permutation)
 # Arguments
 - `n::Ti`: number of columns of the matrix
 - `Ap::Vector{Ti}`: colptr of the matrix to factorize (CSC format)
 - `Ai::Vector{Ti}`: rowval of the matrix to factorize (CSC format)
-- `Ax::Vector{Ti}`: values of the matrix to factorize (CSC format)
-- `Cp::Vector{Ti}`: colptr of the lower triangle
 - `Ci::Vector{Ti}`: rowval of the lower triangle
 - `w::Vector{Ti}`: work array
 - `Pinv::Vector{Ti}`: inverse permutation of P. PAPt is the matrix to factorize (CSC format)
 """
-function col_num!(n, Ap, Ai, Ax, Cp, Ci, w, Pinv)
+function col_num!(n, Ap, Ai, Ci, w, Pinv)
   @inbounds for j = 1:n
     @inbounds for p = Ap[j] : (Ap[j+1]-1)
       i = Ai[p]
@@ -320,29 +319,32 @@ function ldl_solve!(n, B::AbstractMatrix{T}, Lp, Li, Lx, D, P) where T
   return B
 end
 
-
-# a simplistic type for LDLᵀ factorizations so we can do \
+# a simplistic type for LDLᵀ factorizations so we can do \ and separate analyze/factorize
 mutable struct LDLFactorization{T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
+  __analyzed::Bool
+  __factorized::Bool
+  __upper::Bool
   n::Tn
+  # fields related to symbolic analysis
+  parent::Vector{Ti}
+  Lnz::Vector{Ti}
+  flag::Vector{Ti}
+  P::Vector{Tp}
+  pinv::Vector{Tp}
   Lp::Vector{Ti}
+  Cp::Vector{Ti}
+  Ci::Vector{Ti}
+  # fields related to numerical factorization
   Li::Vector{Ti}
   Lx::Vector{T}
   d::Vector{T}
-  P::Vector{Tp}
+  Y::Vector{T}
+  pattern::Vector{Ti}
 end
 
-# use AMD permutation by default
-ldl(A::Array{T,2}, args...; upper = false) where T<:Real = ldl(sparse(A), args...; upper = upper)
-ldl(A::SparseMatrixCSC{T,Ti}; upper = false) where {T<:Real,Ti<:Integer} = ldl(A, amd(A); upper = upper)
-
-# symmetric matrix input
-function ldl(sA::Symmetric{T,SparseMatrixCSC{T,Ti}}, args...) where {T<:Real,Ti<:Integer}
-  sA.uplo == 'L' && error("matrix must contain the upper triangle")
-  ldl(sA.data, args...; upper = true )
-end
-
-# use ldl(A, collect(1:n)) to suppress permutation
-function ldl(A::SparseMatrixCSC{T,Ti}, P::Vector{Tp}; upper = false) where {T<:Real,Ti<:Integer,Tp<:Integer}
+# perform symbolic analysis so it can be reused
+function ldl_analyze(A::Symmetric{T,SparseMatrixCSC{T,Ti}}, P::Vector{Tp}) where {T<:Real,Ti<:Integer,Tp<:Integer}
+  A.uplo == 'U' || error("upper triangle must be supplied")
   n = size(A, 1)
   n == size(A, 2) || throw(DimensionMismatch("matrix must be square"))
   n == length(P) || throw(DimensionMismatch("permutation size mismatch"))
@@ -359,60 +361,163 @@ function ldl(A::SparseMatrixCSC{T,Ti}, P::Vector{Tp}; upper = false) where {T<:R
     pinv[P[k]] = k
   end
 
-  if upper
-    Cp = Vector{Ti}(undef, n + 1)
-    col_symb!(n, A.colptr, A.rowval, Cp, Lp, pinv)
-    Ci = Vector{Ti}(undef, Cp[end] - 1)
-    col_num!(n, A.colptr, A.rowval, A.nzval, Cp, Ci, Lp, pinv)
+  Cp = Vector{Ti}(undef, n + 1)
+  col_symb!(n, A.data.colptr, A.data.rowval, Cp, Lp, pinv)
+  Ci = Vector{Ti}(undef, Cp[end] - 1)
+  col_num!(n, A.data.colptr, A.data.rowval, Ci, Lp, pinv)
 
-    # perform symbolic analysis
-    ldl_symbolic_upper!(n, A.colptr, A.rowval, Cp, Ci, Lp, parent, Lnz, flag, P, pinv)
-  else
-    # perform symbolic analysis
-    ldl_symbolic!(n, A.colptr, A.rowval, Lp, parent, Lnz, flag, P, pinv)
+  # perform symbolic analysis
+  ldl_symbolic_upper!(n, A.data.colptr, A.data.rowval, Cp, Ci, Lp, parent, Lnz, flag, P, pinv)
+
+  # space for numerical factorization will be allocated later
+  Li = Ti[]
+  Lx = T[]
+  D = T[]
+  Y = T[]
+  pattern = Ti[]
+  return LDLFactorization(true, false, true, n, parent, Lnz, flag, P, pinv, Lp, Cp, Ci, Li, Lx, D, Y, pattern)
+end
+
+# convert dense to sparse
+ldl_analyze(A::Symmetric{T,Array{T,2}}) where T<:Real = ldl_analyze(Symmetric(sparse(A.data)))
+ldl_analyze(A::Symmetric{T,Array{T,2}}, P) where T<:Real = ldl_analyze(Symmetric(sparse(A.data)), P)
+
+# use AMD permuation by default
+ldl_analyze(A::Symmetric{T,SparseMatrixCSC{T,Ti}}) where {T<:Real,Ti<:Integer} = ldl_analyze(A, amd(A))
+
+function ldl_factorize!(A::Symmetric{T,SparseMatrixCSC{T,Ti}},
+                        S::LDLFactorization{T,Ti,Tn,Tp}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
+  S.__analyzed || error("perform symbolic analysis prior to numerical factorization")
+  n = size(A, 1)
+  n == S.n || throw(DimensionMismatch("matrix size is inconsistent with symbolic analysis object"))
+
+  # allocate space for numerical factorization if not already done
+  if !(S.__factorized)
+    S.Li = Vector{Ti}(undef, S.Lp[n] - 1)
+    S.Lx = Vector{T}(undef, S.Lp[n] - 1)
+    S.d = Vector{T}(undef, n)
+    S.Y = Vector{T}(undef, n)
+    S.pattern = Vector{Ti}(undef, n)
   end
-
-  # allocate space for numerical factorization
-  Li = Vector{Ti}(undef, Lp[n] - 1)
-  Lx = Vector{T}(undef, Lp[n] - 1)
-  Y = Vector{T}(undef, n)
-  D = Vector{T}(undef, n)
-  pattern = Vector{Ti}(undef, n)
 
   # perform numerical factorization
-  if upper
-    ldl_numeric_upper!(n, A.colptr, A.rowval, A.nzval, Cp, Ci, Lp, parent, Lnz, Li, Lx, D, Y, pattern, flag, P, pinv)
-  else
-    ldl_numeric!(n, A.colptr, A.rowval, A.nzval, Lp, parent, Lnz, Li, Lx, D, Y, pattern, flag, P, pinv)
+  ldl_numeric_upper!(S.n, A.data.colptr, A.data.rowval, A.data.nzval,
+                     S.Cp, S.Ci, S.Lp, S.parent, S.Lnz, S.Li, S.Lx, S.d, S.Y, S.pattern, S.flag, S.P, S.pinv)
+  return S
+end
+
+# convert dense to sparse
+ldl_factorize!(A::Symmetric{T,Array{T,2}}, S::LDLFactorization) where T<:Real = ldl_factorize!(Symmetric(sparse(A.data)), S)
+
+# symmetric matrix input
+function ldl(sA::Symmetric{T,SparseMatrixCSC{T,Ti}}, P::Vector{Tp}) where {T<:Real,Ti<:Integer,Tp<:Integer}
+  sA.uplo == 'L' && error("matrix must contain the upper triangle")
+  # ldl(sA.data, args...; upper = true )
+  S = ldl_analyze(sA, P)
+  ldl_factorize!(sA, S)
+end
+
+ldl(sA::Symmetric{T,Array{T,2}}) where T<:Real = ldl(Symmetric(sparse(sA.data)))
+ldl(sA::Symmetric{T,Array{T,2}}, P) where T<:Real = ldl(Symmetric(sparse(sA.data)), P)
+ldl(sA::Symmetric{T,SparseMatrixCSC{T,Ti}}) where {T<:Real,Ti<:Integer} = ldl(sA, amd(sA))
+
+# convert dense to sparse
+ldl(A::Array{T,2}) where T<:Real = ldl(sparse(A))
+ldl(A::Array{T,2}, P) where T<:Real = ldl(sparse(A), P)
+
+# use AMD permutation by default
+ldl(A::SparseMatrixCSC{T,Ti}) where {T<:Real,Ti<:Integer} = ldl(A, amd(A))
+
+# use ldl(A, collect(1:n)) to suppress permutation
+function ldl_analyze(A::SparseMatrixCSC{T,Ti}, P::Vector{Tp}) where {T<:Real,Ti<:Integer,Tp<:Integer}
+  n = size(A, 1)
+  n == size(A, 2) || throw(DimensionMismatch("matrix must be square"))
+  n == length(P) || throw(DimensionMismatch("permutation size mismatch"))
+
+  # allocate space for symbolic analysis
+  parent = Vector{Ti}(undef, n)
+  Lnz = Vector{Ti}(undef, n)
+  flag = Vector{Ti}(undef, n)
+  pinv = Vector{Tp}(undef, n)
+  Lp = Vector{Ti}(undef, n+1)
+  Cp = Ti[]
+  Ci = Ti[]
+
+  # Compute inverse permutation
+  @inbounds for k = 1:n
+    pinv[P[k]] = k
   end
 
-  return LDLFactorization(n, Lp, Li, Lx, D, P)
+  ldl_symbolic!(n, A.colptr, A.rowval, Lp, parent, Lnz, flag, P, pinv)
+
+  # space for numerical factorization will be allocated later
+  Li = Ti[]
+  Lx = T[]
+  D = T[]
+  Y = T[]
+  pattern = Ti[]
+  return LDLFactorization(true, false, false, n, parent, Lnz, flag, P, pinv, Lp, Cp, Ci, Li, Lx, D, Y, pattern)
+end
+
+# convert dense to sparse
+ldl_analyze(A::Array{T,2}) where T<:Real = ldl_analyze(sparse(A))
+ldl_analyze(A::Array{T,2}, P) where T<:Real = ldl_analyze(sparse(A), P)
+
+# use AMD permuation by default
+ldl_analyze(A::SparseMatrixCSC{T,Ti}) where {T<:Real,Ti<:Integer} = ldl_analyze(A, amd(A))
+
+function ldl_factorize!(A::SparseMatrixCSC{T,Ti},
+                        S::LDLFactorization{T,Ti,Tn,Tp}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
+  S.__upper && error("symbolic analysis was performed for a Symmetric{} matrix")
+  S.__analyzed || error("perform symbolic analysis prior to numerical factorization")
+  n = size(A, 1)
+  n == S.n || throw(DimensionMismatch("matrix size is inconsistent with symbolic analysis object"))
+
+  if !(S.__factorized)
+    S.Li = Vector{Ti}(undef, S.Lp[n] - 1)
+    S.Lx = Vector{T}(undef, S.Lp[n] - 1)
+    S.d = Vector{T}(undef, n)
+    S.Y = Vector{T}(undef, n)
+    S.pattern = Vector{Ti}(undef, n)
+  end
+
+  ldl_numeric!(S.n, A.colptr, A.rowval, A.nzval, S.Lp, S.parent, S.Lnz,
+               S.Li, S.Lx, S.d, S.Y, S.pattern, S.flag, S.P, S.pinv)
+  return S
+end
+
+# convert dense to sparse
+ldl_factorize!(A::Array{T,2}, S::LDLFactorization) where T<:Real = ldl_factorize!(sparse(A), S)
+
+function ldl(A::SparseMatrixCSC, P::Vector{Tp}) where Tp <: Integer
+  S = ldl_analyze(A, P)
+  ldl_factorize!(A, S)
 end
 
 import Base.(\)
-function (\)(LDL::LDLFactorization{T,Ti}, b::AbstractVector{T}) where {T<:Real,Ti<:Integer}
+function (\)(LDL::LDLFactorization{T,Ti,Tn,Tp}, b::AbstractVector{T}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
   y = copy(b)
   ldl_solve!(LDL.n, y, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
 end
 
-function (\)(LDL::LDLFactorization{T,Ti}, B::AbstractMatrix{T}) where {T<:Real,Ti<:Integer}
+function (\)(LDL::LDLFactorization{T,Ti,Tn,Tp}, B::AbstractMatrix{T}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
   Y = copy(B)
   ldl_solve!(LDL.n, Y, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
 end
 
 import LinearAlgebra.ldiv!
-@inline ldiv!(LDL::LDLFactorization{T,Ti}, b::AbstractVector{T}) where {T<:Real,Ti<:Integer} =
+@inline ldiv!(LDL::LDLFactorization{T,Ti,Tn,Tp}, b::AbstractVector{T}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer} =
   ldl_solve!(LDL.n, b, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
 
-@inline ldiv!(LDL::LDLFactorization{T,Ti}, B::AbstractMatrix{T}) where {T<:Real,Ti<:Integer} =
+@inline ldiv!(LDL::LDLFactorization{T,Ti,Tn,Tp}, B::AbstractMatrix{T}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer} =
   ldl_solve!(LDL.n, B, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
 
-function ldiv!(y::AbstractVector{T}, LDL::LDLFactorization{T,Ti}, b::AbstractVector{T}) where {T<:Real,Ti<:Integer}
+function ldiv!(y::AbstractVector{T}, LDL::LDLFactorization{T,Ti,Tn,Tp}, b::AbstractVector{T}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
   y .= b
   ldl_solve!(LDL.n, y, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
 end
 
-function ldiv!(Y::AbstractMatrix{T}, LDL::LDLFactorization{T,Ti}, B::AbstractMatrix{T}) where {T<:Real,Ti<:Integer}
+function ldiv!(Y::AbstractMatrix{T}, LDL::LDLFactorization{T,Ti}, B::AbstractMatrix{T}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
   Y .= B
   ldl_solve!(LDL.n, Y, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
 end
