@@ -39,7 +39,8 @@ function col_symb!(n, Ap, Ai, Cp, w, Pinv)
 end
 
 """
-    col_num!(n, Ap, Ai, w, Pinv)
+    col_num!(n, Ap, Ai, Ci, w, Pinv)
+    
 Compute the rowval and values of missing elements of the upper triangle of PAPt. Nonzero elements have to verify Pinv[i] ≥ Pinv[j] where i is the
 row index and j the column index. Those elements are the nonzeros of the lower triangle of A that will be in the upper triangle of PAPt (after permutation)
 # Arguments
