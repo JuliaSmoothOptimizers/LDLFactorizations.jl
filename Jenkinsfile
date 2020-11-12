@@ -49,7 +49,7 @@ pipeline {
 
      causeString: 'Triggered on $comment',
 
-     token: "LDLFactorizations",
+     token: "ForkedLDLFactorizations",
 
      printContributedVariables: true,
      printPostContent: true,
@@ -77,7 +77,7 @@ pipeline {
           git checkout master
           git pull origin master
           git fetch origin
-          git branch -D $BRANCH_NAME
+          git branch -D $BRANCH_NAME || true
           git checkout -b $BRANCH_NAME origin/$BRANCH_NAME
           '''
         }
@@ -92,8 +92,8 @@ pipeline {
           }
         }
         dir(WORKSPACE + "/$repo") {
-          sh "set -x"
-          sh "qsub -N ${repo}_${pullrequest} -V -cwd -o $HOME/benchmarks/bmark_output.log -e $HOME/benchmarks/bmark_error.log push_benchmarks.sh $bmarkFile"
+          sh "mkdir -p $HOME/benchmarks/${repo}"
+          sh "qsub -N ${repo}_${pullrequest} -V -cwd -o $HOME/benchmarks/${repo}/${pullrequest}_bmark_output.log -e $HOME/benchmarks/${repo}/${pullrequest}_bmark_error.log push_benchmarks.sh $bmarkFile"
         }   
       }
     }
