@@ -22,7 +22,8 @@ const formulations = ("2x2", "3x3")
 const iters = (0, 5, 10)
 
 const SUITE = BenchmarkGroup()
-SUITE["fact"] = BenchmarkGroup()
+SUITE["analyze"] = BenchmarkGroup()
+SUITE["factorize"] = BenchmarkGroup()
 SUITE["solve1"] = BenchmarkGroup()
 SUITE["solve5"] = BenchmarkGroup()
 
