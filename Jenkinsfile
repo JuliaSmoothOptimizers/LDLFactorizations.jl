@@ -92,7 +92,7 @@ pipeline {
         }
         dir(WORKSPACE + "/$repo") {
           sh "set -x"
-          sh "qsub -N $repo_$pullrequest -V -cwd -o $HOME/benchmarks/bmark_output.log -e $HOME/benchmarks/bmark_error.log push_benchmarks.sh $bmarkFile"
+          sh "qsub -N ${repo}_${pullrequest} -V -cwd -o $HOME/benchmarks/bmark_output.log -e $HOME/benchmarks/bmark_error.log push_benchmarks.sh $bmarkFile"
         }   
       }
     }
