@@ -105,10 +105,10 @@ pipeline {
     cleanup {
       dir(WORKSPACE + "/$repo") {
         sh 'printenv'
-        sh 'git checkout ' + BRANCH_NAME
         sh '''
-        git branch -D benchmark
         git clean -fd
+        git checkout master
+        git branch -D $BRANCH_NAME
         '''
       }
     }
