@@ -73,13 +73,14 @@ pipeline {
       steps {
         dir(WORKSPACE + "/$repo") {
           sh '''
-          git checkout $BRANCH_NAME
           git clean -fd
-          git pull
-          git fetch --no-tags origin '+refs/heads/master:refs/remotes/origin/master'
-          git checkout -b benchmark
-          '''    
-        }   
+          git checkout master
+          git pull origin master
+          git fetch origin
+          git branch -D $BRANCH_NAME
+          git checkout -b $BRANCH_NAME origin/$BRANCH_NAME
+          '''
+        }
       }
     }
     stage('run benchmarks') {
