@@ -92,8 +92,8 @@ pipeline {
           }
         }
         dir(WORKSPACE + "/$repo") {
-          sh "mkdir -p $HOME/benchmarks/${repo}"
-          sh "qsub -N ${repo}_${pullrequest} -V -cwd -o $HOME/benchmarks/${repo}/${pullrequest}_bmark_output.log -e $HOME/benchmarks/${repo}/${pullrequest}_bmark_error.log push_benchmarks.sh $bmarkFile"
+          sh "mkdir -p $HOME/benchmarks/${org}/${repo}"
+          sh "qsub -N ${repo}_${pullrequest} -V -cwd -o $HOME/benchmarks/${org}/${repo}/${pullrequest}_bmark_output.log -e $HOME/benchmarks/${org}/${repo}/${pullrequest}_bmark_error.log push_benchmarks.sh $bmarkFile"
         }   
       }
     }
@@ -108,7 +108,7 @@ pipeline {
         sh '''
         git clean -fd
         git checkout master
-        git branch -D $BRANCH_NAME
+        git branch -D $BRANCH_NAME || true
         '''
       }
     }
