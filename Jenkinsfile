@@ -49,7 +49,7 @@ pipeline {
 
      causeString: 'Triggered on $comment',
 
-     token: "ForkedLDLFactorizations",
+     token: "LDLFactorizations",
 
      printContributedVariables: true,
      printPostContent: true,
