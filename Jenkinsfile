@@ -107,6 +107,7 @@ pipeline {
         sh 'printenv'
         sh '''
         git clean -fd
+        git reset --hard
         git checkout master
         git branch -D $BRANCH_NAME || true
         '''
