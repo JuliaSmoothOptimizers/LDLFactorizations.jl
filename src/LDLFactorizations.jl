@@ -129,7 +129,6 @@ end
 
 function ldl_numeric_upper!(n, Ap, Ai, Ax, Cp, Ci, Lp, parent, Lnz, Li, Lx, D, Y,
                             pattern, flag, P, Pinv; dynamic_args...)
-  T = eltype(Ax)
   if length(dynamic_args) != 0
     dynamic_regul = true
     dynamic_dict = Dict(dynamic_args)
@@ -199,7 +198,7 @@ function ldl_numeric_upper!(n, Ap, Ai, Ax, Cp, Ci, Lp, parent, Lnz, Li, Lx, D, Y
       Lnz[i] += 1
       top += 1
     end
-    if dynamic_regul && abs(D[k]) < eps(T) * dynamic_dict[:Amax]
+    if dynamic_regul && abs(D[k]) < dynamic_dict[:tol]
       if P[k] <= dynamic_dict[:n_d]
         D[k] += dynamic_dict[:r1]
       else
@@ -403,8 +402,8 @@ function ldl_factorize!(A::Symmetric{T,SparseMatrixCSC{T,Ti}},
                         S::LDLFactorization{T,Ti,Tn,Tp};
                         dynamic_args...) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
   # dynamic_args... is used to perform dynamic regularization of S.d, for example if T=Float64:
-  # ldl_factorize!(A, S, Amax=100.0, n_d=20, r1=-eps()^(1/4), r2=eps()^(1/2))
-  # in this case, if i<=n_d and abs(S.d[i]) <= Amax*eps() (without permuting), S.d[i]+=r1
+  # ldl_factorize!(A, S, tol=1e-8, n_d=20, r1=-eps()^(1/4), r2=eps()^(1/2))
+  # in this case, if i<=n_d and abs(S.d[i]) <= tol (without permuting), S.d[i]+=r1
   # (resp. S.d[i]+=r2 if i>n_d)
   S.__analyzed || error("perform symbolic analysis prior to numerical factorization")
   n = size(A, 1)
