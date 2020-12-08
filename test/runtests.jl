@@ -196,7 +196,7 @@ end
        0.   0.   0.   5.   7.   9.   0.   2.   7.   1.
        3.   2.   0.   0.   0.   0.   1.   3.   3.   2.
        0.   0.   0.   0.  -3   -4    0.   0.   0.   0. ]
-  M = A * A'  # det(A) = 0 => M positive indefinite
+  M = A * A'  # det(A) = 0 => M positive semidefinite
   b = M * ones(10)
   x = copy(b)
   S = ldl_analyze(Symmetric(triu(M), :U))
