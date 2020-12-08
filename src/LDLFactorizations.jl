@@ -199,11 +199,8 @@ function ldl_numeric_upper!(n, Ap, Ai, Ax, Cp, Ci, Lp, parent, Lnz, Li, Lx, D, Y
       top += 1
     end
     if dynamic_regul && abs(D[k]) < dynamic_dict[:tol]
-      if P[k] <= dynamic_dict[:n_d]
-        D[k] += dynamic_dict[:r1]
-      else
-        D[k] += dynamic_dict[:r2]
-      end
+      r = P[k] <= dynamic_dict[:n_d] ? dynamic_dict[:r1] : dynamic_dict[:r2]
+      D[k] = sign(r) * max(abs(D[k] + r), abs(r))
     end
     D[k] == 0 && throw(SQDException("matrix does not possess a LDL' factorization for this permutation"))
   end
@@ -426,7 +423,7 @@ function ldl_factorize!(A::Symmetric{T,SparseMatrixCSC{T,Ti}},
 end
 
 # convert dense to sparse
-ldl_factorize!(A::Symmetric{T,Array{T,2}}, S::LDLFactorization) where T<:Real = ldl_factorize!(Symmetric(sparse(A.data)), S)
+ldl_factorize!(A::Symmetric{T,Array{T,2}}, S::LDLFactorization; dynamic_args...) where T<:Real = ldl_factorize!(Symmetric(sparse(A.data)), S; dynamic_args...)
 
 # symmetric matrix input
 function ldl(sA::Symmetric{T,SparseMatrixCSC{T,Ti}}, P::Vector{Tp}) where {T<:Real,Ti<:Integer,Tp<:Integer}

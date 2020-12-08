@@ -186,18 +186,18 @@ end
 end
 
 @testset "positive_semidefinite" begin
-  A = [0.   0.   0.   0.   0.   0.   0.   0.   1.   0.
-       0.   0.   0.   0.   0.   0.   0.   0.   1.   0.
+  A = [0.   0.   0.   0.   0.   0.   0.   0.   4.   0.
+       0.   0.   0.   0.   0.   0.   0.   0.   5.   0.
        2.   4.   5.   -2   4.   1.   2.   2.   2.   0.
        0.   0.   0.   0.   1.   9.   9.   1.   7.   1.
-       3.   0.   0.   0.   0.   0.   0.   0.   0.   0.
+       0.   0.   0.   0.   0.   0.   0.   0.   1.   0.
        1.   3.   2.   1.   4.   3.   1.   0.   0.   7.
        -3.  8.   0.   0.   0.   0.   -2.  0.   0.   1.
        0.   0.   0.   5.   7.   9.   0.   2.   7.   1.
        3.   2.   0.   0.   0.   0.   1.   3.   3.   2.
        0.   0.   0.   0.  -3   -4    0.   0.   0.   0. ]
-  M = sparse(A * A')  # det(A) = 0 => M positive indefinite
-  b = ones(10)
+  M = A * A'  # det(A) = 0 => M positive indefinite
+  b = M * ones(10)
   x = copy(b)
   S = ldl_analyze(Symmetric(triu(M), :U))
   S = ldl_factorize!(Symmetric(triu(M), :U), S, tol=1e-8, r1=0., r2=1e-8, n_d=0)
@@ -207,11 +207,11 @@ end
 end
 
 @testset "SQD" begin
-  A = [0.   0.   0.   0.   0.   0.   0.   0.   1.   0.
-       0.   0.   0.   0.   0.   0.   0.   0.   1.   0.
+  A = [0.   0.   0.   0.   0.   0.   0.   0.   4.   0.
+       0.   0.   0.   0.   0.   0.   0.   0.   5.   0.
        2.   4.   5.   -2   4.   1.   2.   2.   2.   0.
        0.   0.   0.   0.   1.   9.   9.   1.   7.   1.
-       3.   0.   0.   0.   0.   0.   0.   0.   0.   0.
+       0.   0.   0.   0.   0.   0.   0.   0.   1.   0.
        1.   3.   2.   1.   4.   3.   1.   0.   0.   7.
        -3.  8.   0.   0.   0.   0.   -2.  0.   0.   1.
        0.   0.   0.   5.   7.   9.   0.   2.   7.   1.
@@ -222,7 +222,7 @@ end
   M[11:20, 11:20] = A * A'
   # M = [-A*A'    0
   #        0     A*A'] where A*A' is symmetric positive indefinite
-  b = ones(20)
+  b = M * ones(20)
   x = copy(b)
   S = ldl_analyze(Symmetric(triu(M), :U))
   S = ldl_factorize!(Symmetric(triu(M), :U), S, tol=1e-8, r1=-1e-8, r2=1e-8, n_d=0)
