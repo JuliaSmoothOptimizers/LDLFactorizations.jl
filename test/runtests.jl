@@ -184,3 +184,49 @@ end
     @test nnz(LDLT) == nnz(LDLT.L) + length(LDLT.d)
   end
 end
+
+@testset "positive_semidefinite" begin
+  A = [0.   0.   0.   0.   0.   0.   0.   0.   4.   0.
+       0.   0.   0.   0.   0.   0.   0.   0.   5.   0.
+       2.   4.   5.   -2   4.   1.   2.   2.   2.   0.
+       0.   0.   0.   0.   1.   9.   9.   1.   7.   1.
+       0.   0.   0.   0.   0.   0.   0.   0.   1.   0.
+       1.   3.   2.   1.   4.   3.   1.   0.   0.   7.
+       -3.  8.   0.   0.   0.   0.   -2.  0.   0.   1.
+       0.   0.   0.   5.   7.   9.   0.   2.   7.   1.
+       3.   2.   0.   0.   0.   0.   1.   3.   3.   2.
+       0.   0.   0.   0.  -3   -4    0.   0.   0.   0. ]
+  M = A * A'  # det(A) = 0 => M positive semidefinite
+  b = M * ones(10)
+  x = copy(b)
+  S = ldl_analyze(Symmetric(triu(M), :U))
+  S = ldl_factorize!(Symmetric(triu(M), :U), S, tol=1e-8, r1=0., r2=1e-8, n_d=0)
+  x = ldiv!(S, x)
+  r = M * x - b
+  @test norm(r) ≤ sqrt(eps()) * norm(b)
+end
+
+@testset "SQD" begin
+  A = [0.   0.   0.   0.   0.   0.   0.   0.   4.   0.
+       0.   0.   0.   0.   0.   0.   0.   0.   5.   0.
+       2.   4.   5.   -2   4.   1.   2.   2.   2.   0.
+       0.   0.   0.   0.   1.   9.   9.   1.   7.   1.
+       0.   0.   0.   0.   0.   0.   0.   0.   1.   0.
+       1.   3.   2.   1.   4.   3.   1.   0.   0.   7.
+       -3.  8.   0.   0.   0.   0.   -2.  0.   0.   1.
+       0.   0.   0.   5.   7.   9.   0.   2.   7.   1.
+       3.   2.   0.   0.   0.   0.   1.   3.   3.   2.
+       0.   0.   0.   0.  -3   -4    0.   0.   0.   0. ]
+  M = spzeros(20, 20)
+  M[1:10, 1:10] = -A * A'
+  M[11:20, 11:20] = A * A'
+  # M = [-A*A'    0
+  #        0     A*A'] where A*A' is symmetric positive semidefinite
+  b = M * ones(20)
+  x = copy(b)
+  S = ldl_analyze(Symmetric(triu(M), :U))
+  S = ldl_factorize!(Symmetric(triu(M), :U), S, tol=1e-8, r1=-1e-8, r2=1e-8, n_d=0)
+  x = ldiv!(S, x)
+  r = M * x - b
+  @test norm(r) ≤ sqrt(eps()) * norm(b)
+end
