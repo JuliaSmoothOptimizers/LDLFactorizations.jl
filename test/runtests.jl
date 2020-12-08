@@ -221,7 +221,7 @@ end
   M[1:10, 1:10] = -A * A'
   M[11:20, 11:20] = A * A'
   # M = [-A*A'    0
-  #        0     A*A'] where A*A' is symmetric positive indefinite
+  #        0     A*A'] where A*A' is symmetric positive semidefinite
   b = M * ones(20)
   x = copy(b)
   S = ldl_analyze(Symmetric(triu(M), :U))
