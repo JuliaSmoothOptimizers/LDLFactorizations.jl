@@ -230,3 +230,44 @@ end
   r = M * x - b
   @test norm(r) ≤ sqrt(eps()) * norm(b)
 end
+
+@testset "ldl_mul!" begin
+  A = [ 1.7     0     0     0     0     0     0     0   .13     0
+          0    1.     0     0   .02     0     0     0     0   .01
+          0     0   1.5     0     0     0     0     0     0     0
+          0     0     0   1.1     0     0     0     0     0     0
+          0   .02     0     0   2.6     0   .16   .09   .52   .53
+          0     0     0     0     0   1.2     0     0     0     0
+          0     0     0     0   .16     0   1.3     0     0   .56
+          0     0     0     0   .09     0     0   1.6   .11     0
+        .13     0     0     0   .52     0     0   .11   1.4     0
+          0   .01     0     0   .53     0   .56     0     0   3.1 ]
+  b = [.287, .22, .45, .44, 2.486, .72, 1.55, 1.424, 1.621, 3.759]
+  T = eltype(A)
+  ϵ = sqrt(eps(T))
+  S = ldl_analyze(Symmetric(triu(A), :U))
+  ldl_factorize!(Symmetric(triu(A), :U), S)
+  x = copy(b)
+  ldiv!(S, x)
+  r1 = copy(x)
+  lmul!(S, r1)
+  r1 .-= b  # r1 = LDL*x-b
+  @test norm(r1) ≤ sqrt(ϵ) * norm(b)
+  mul!(r1, S, x)
+  r1 .-= b # same test using mul!
+  @test norm(r1) ≤ sqrt(ϵ) * norm(b)
+
+  LDL1 = spzeros(T, size(A)...)
+  LDL1[diagind(LDL1)] .= one(T)
+  LDL1 = lmul!(S, LDL1)
+  r2 = zeros(T, length(b))
+  mul!(r2, LDL1, x)
+  r2 .-= b # r2 = LDL*I*x-b
+  @test norm(r2) ≤ sqrt(ϵ) * norm(b)
+  LDL2 = spzeros(T, size(A)...)
+  LDL2[diagind(LDL2)] .= one(T)
+  mul!(LDL2, S, copy(LDL2))
+  mul!(r2, LDL2, x)
+  r2 .-= b # same test using mul!
+  @test norm(r2) ≤ sqrt(ϵ) * norm(b)
+end
