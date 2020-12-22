@@ -1,6 +1,6 @@
 module LDLFactorizations
 
-export ldl, ldl_analyze, ldl_factorize!, \, ldiv!, nnz
+export ldl, ldl_analyze, ldl_factorize!, \, ldiv!, lmul!, mul!, nnz
 
 using AMD, LinearAlgebra, SparseArrays
 
@@ -329,6 +329,83 @@ function ldl_solve!(n, B::AbstractMatrix{T}, Lp, Li, Lx, D, P) where T
   return B
 end
 
+# compute L*D*L'*x where x is a vector
+function ldl_ltmul!(n, x::AbstractVector, Lp, Li, Lx)
+    @inbounds for j = 1:n
+        xj = x[j]
+        @inbounds for p = Lp[j] : (Lp[j+1] - 1)
+            xj += Lx[p] * x[Li[p]]
+        end
+        x[j] = xj
+    end
+    return x
+end
+
+function ldl_dmul!(n, x::AbstractVector, D)
+    @inbounds for j = 1:n
+        x[j] *= D[j]
+    end
+    return x
+end
+
+function ldl_lmul!(n, x::AbstractVector, Lp, Li, Lx)
+    @inbounds for j = n:-1:1
+        xj = x[j]
+        @inbounds for p = Lp[j] : (Lp[j+1] - 1)
+            x[Li[p]] += Lx[p] * xj
+        end
+    end
+    return x
+end
+
+function ldl_mul!(n, x::AbstractVector, Lp, Li, Lx, D, P)
+    @views y = x[P]
+    ldl_ltmul!(n, y, Lp, Li, Lx)
+    ldl_dmul!(n, y, D)
+    ldl_lmul!(n, y, Lp, Li, Lx)
+  return x
+end
+
+# compute L*D*L'*X where X is a matrix
+function ldl_ltmul!(n, X::AbstractMatrix{T}, Lp, Li, Lx) where T
+    @inbounds for j = 1:n
+        @inbounds for p = Lp[j] : (Lp[j+1] - 1)
+            for k ∈ axes(X, 2)
+                X[j, k] += Lx[p] * X[Li[p], k]
+            end
+        end
+    end
+    return X
+end
+
+function ldl_dmul!(n, X::AbstractMatrix{T}, D) where T
+    @inbounds for j = 1:n
+        @inbounds for k ∈ axes(X, 2)
+            X[j, k] *= D[j]
+        end
+    end
+    return X
+end
+
+function ldl_lmul!(n, X::AbstractMatrix{T}, Lp, Li, Lx) where T
+    @inbounds for j = n:-1:1
+        @inbounds for p = Lp[j] : (Lp[j+1] - 1)
+            for k ∈ axes(X, 2)
+                X[Li[p], k] += Lx[p] * X[j, k]
+            end
+        end
+    end
+    return X
+end
+
+function ldl_mul!(n, X::AbstractMatrix{T}, Lp, Li, Lx, D, P) where T
+    @views Y = X[P, :]
+    ldl_ltmul!(n, Y, Lp, Li, Lx)
+    ldl_dmul!(n, Y, D)
+    ldl_lmul!(n, Y, Lp, Li, Lx)
+  return X
+end
+
 # a simplistic type for LDLᵀ factorizations so we can do \ and separate analyze/factorize
 mutable struct LDLFactorization{T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
   __analyzed::Bool
@@ -536,6 +613,25 @@ end
 function ldiv!(Y::AbstractMatrix{T}, LDL::LDLFactorization{T,Ti}, B::AbstractMatrix{T}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
   Y .= B
   ldl_solve!(LDL.n, Y, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
+end
+
+import LinearAlgebra.lmul!, LinearAlgebra.mul!
+function lmul!(LDL::LDLFactorization{T,Ti,Tn,Tp}, x::AbstractVector{T}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
+  ldl_mul!(LDL.n, x, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
+end
+
+function lmul!(LDL::LDLFactorization{T,Ti,Tn,Tp}, X::AbstractMatrix{T}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
+  ldl_mul!(LDL.n, X, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
+end
+
+function mul!(y::AbstractVector{T}, LDL::LDLFactorization{T,Ti,Tn,Tp}, x::AbstractVector{T}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
+  y .= x
+  ldl_mul!(LDL.n, y, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
+end
+
+function mul!(Y::AbstractMatrix{T}, LDL::LDLFactorization{T,Ti,Tn,Tp}, X::AbstractMatrix{T}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
+  Y .= X
+  ldl_mul!(LDL.n, Y, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
 end
 
 Base.eltype(LDL::LDLFactorization) = eltype(LDL.d)
