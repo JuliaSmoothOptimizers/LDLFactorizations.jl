@@ -252,27 +252,27 @@ end
   ldiv!(S, x)
   r1 = copy(x)
   lmul!(S, r1)
-  @test norm(r1 - A * x) ≤ sqrt(ϵ) * norm(b)
+  @test norm(r1 - A * x) ≤ sqrt(ϵ) * norm(r1)
   r1 .-= b  # r1 = LDL*x-b
   @test norm(r1) ≤ sqrt(ϵ) * norm(b)
   mul!(r1, S, x) # same test using mul!
-  @test norm(r1 - A * x) ≤ sqrt(ϵ) * norm(b)
+  @test norm(r1 - A * x) ≤ sqrt(ϵ) * norm(r1)
   r1 .-= b
   @test norm(r1) ≤ sqrt(ϵ) * norm(b)
 
   LDL1 = spzeros(T, size(A)...)
   LDL1[diagind(LDL1)] .= one(T)
   LDL1 = lmul!(S, LDL1)
-  r2 = zeros(T, length(b))
+  r2 = similar(b)
   mul!(r2, LDL1, x)
-  @test norm(r2 - A * x) ≤ sqrt(ϵ) * norm(b)
+  @test norm(r2 - A * x) ≤ sqrt(ϵ) * norm(r2)
   r2 .-= b # r2 = LDL*I*x-b
   @test norm(r2) ≤ sqrt(ϵ) * norm(b)
   LDL2 = spzeros(T, size(A)...)
   LDL2[diagind(LDL2)] .= one(T)
   mul!(LDL2, S, copy(LDL2))
   mul!(r2, LDL2, x) # same test using mul!
-  @test norm(r2 - A * x) ≤ sqrt(ϵ) * norm(b)
+  @test norm(r2 - A * x) ≤ sqrt(ϵ) * norm(r2)
   r2 .-= b
   @test norm(r2) ≤ sqrt(ϵ) * norm(b)
 end
