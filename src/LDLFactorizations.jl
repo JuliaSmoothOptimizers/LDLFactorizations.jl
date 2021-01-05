@@ -367,7 +367,7 @@ function ldl_mul!(n, x::AbstractVector, Lp, Li, Lx, D, P)
 end
 
 # compute L*D*L'*X where X is a matrix
-function ldl_ltmul!(n, X::AbstractMatrix{T}, Lp, Li, Lx) where T
+function ldl_ltmul!(n, X::AbstractMatrix, Lp, Li, Lx)
     @inbounds for j = 1:n
         @inbounds for p = Lp[j] : (Lp[j+1] - 1)
             for k ∈ axes(X, 2)
@@ -378,7 +378,7 @@ function ldl_ltmul!(n, X::AbstractMatrix{T}, Lp, Li, Lx) where T
     return X
 end
 
-function ldl_dmul!(n, X::AbstractMatrix{T}, D) where T
+function ldl_dmul!(n, X::AbstractMatrix, D)
     @inbounds for j = 1:n
         @inbounds for k ∈ axes(X, 2)
             X[j, k] *= D[j]
@@ -387,7 +387,7 @@ function ldl_dmul!(n, X::AbstractMatrix{T}, D) where T
     return X
 end
 
-function ldl_lmul!(n, X::AbstractMatrix{T}, Lp, Li, Lx) where T
+function ldl_lmul!(n, X::AbstractMatrix, Lp, Li, Lx)
     @inbounds for j = n:-1:1
         @inbounds for p = Lp[j] : (Lp[j+1] - 1)
             for k ∈ axes(X, 2)
@@ -398,7 +398,7 @@ function ldl_lmul!(n, X::AbstractMatrix{T}, Lp, Li, Lx) where T
     return X
 end
 
-function ldl_mul!(n, X::AbstractMatrix{T}, Lp, Li, Lx, D, P) where T
+function ldl_mul!(n, X::AbstractMatrix, Lp, Li, Lx, D, P)
     @views Y = X[P, :]
     ldl_ltmul!(n, Y, Lp, Li, Lx)
     ldl_dmul!(n, Y, D)
