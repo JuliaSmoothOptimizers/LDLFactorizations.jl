@@ -129,12 +129,7 @@ end
 
 function ldl_numeric_upper!(n, Ap, Ai, Ax, Cp, Ci, Lp, parent, Lnz, Li, Lx, D, Y,
                             pattern, flag, P, Pinv; dynamic_args...)
-  if length(dynamic_args) != 0
-    dynamic_regul = true
-    dynamic_dict = Dict(dynamic_args)
-  else
-    dynamic_regul = false
-  end
+  dynamic_regul = length(dynamic_args) != 0 
   @inbounds for k = 1:n
     Y[k] = 0
     top = n+1
@@ -198,8 +193,8 @@ function ldl_numeric_upper!(n, Ap, Ai, Ax, Cp, Ci, Lp, parent, Lnz, Li, Lx, D, Y
       Lnz[i] += 1
       top += 1
     end
-    if dynamic_regul && abs(D[k]) < dynamic_dict[:tol]
-      r = P[k] <= dynamic_dict[:n_d] ? dynamic_dict[:r1] : dynamic_dict[:r2]
+    if dynamic_regul && abs(D[k]) < dynamic_args[:tol]
+      r = P[k] <= dynamic_args[:n_d] ? dynamic_args[:r1] : dynamic_args[:r2]
       D[k] = sign(r) * max(abs(D[k] + r), abs(r))
     end
     D[k] == 0 && throw(SQDException("matrix does not possess a LDL' factorization for this permutation"))
