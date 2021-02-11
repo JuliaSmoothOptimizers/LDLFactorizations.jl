@@ -128,8 +128,7 @@ function ldl_symbolic!(n, Ap, Ai, Lp, parent, Lnz, flag, P, Pinv)
 end
 
 function ldl_numeric_upper!(n, Ap, Ai, Ax, Cp, Ci, Lp, parent, Lnz, Li, Lx, D, Y,
-                            pattern, flag, P, Pinv; 
-                            r1=zero(eltype(Ax)), r2=zero(eltype(Ax)), tol=zero(eltype(Ax)), n_d=n)
+                            pattern, flag, P, Pinv, r1, r2, tol, n_d)
   dynamic_reg = r1 > 0 || r2 > 0 
   @inbounds for k = 1:n
     Y[k] = 0
@@ -423,6 +422,11 @@ mutable struct LDLFactorization{T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
   d::Vector{T}
   Y::Vector{T}
   pattern::Vector{Ti}
+  # fields related to dynamic regularization
+  r1::T
+  r2::T
+  tol::T
+  n_d::Tn
 end
 
 # perform symbolic analysis so it can be reused
@@ -458,7 +462,8 @@ function ldl_analyze(A::Symmetric{T,SparseMatrixCSC{T,Ti}}, P::Vector{Tp}) where
   D = T[]
   Y = T[]
   pattern = Ti[]
-  return LDLFactorization(true, false, true, n, parent, Lnz, flag, P, pinv, Lp, Cp, Ci, Li, Lx, D, Y, pattern)
+  return LDLFactorization(true, false, true, n, parent, Lnz, flag, P, pinv, Lp, Cp, Ci, Li, Lx, D, Y, pattern,
+                          zero(T), zero(T), zero(T), n)
 end
 
 # convert dense to sparse
@@ -469,8 +474,7 @@ ldl_analyze(A::Symmetric{T,Array{T,2}}, P) where T<:Real = ldl_analyze(Symmetric
 ldl_analyze(A::Symmetric{T,SparseMatrixCSC{T,Ti}}) where {T<:Real,Ti<:Integer} = ldl_analyze(A, amd(A))
 
 function ldl_factorize!(A::Symmetric{T,SparseMatrixCSC{T,Ti}},
-                        S::LDLFactorization{T,Ti,Tn,Tp};
-                        dynamic_args...) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
+                        S::LDLFactorization{T,Ti,Tn,Tp}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
   S.__analyzed || error("perform symbolic analysis prior to numerical factorization")
   n = size(A, 1)
   n == S.n || throw(DimensionMismatch("matrix size is inconsistent with symbolic analysis object"))
@@ -486,13 +490,13 @@ function ldl_factorize!(A::Symmetric{T,SparseMatrixCSC{T,Ti}},
 
   # perform numerical factorization
   ldl_numeric_upper!(S.n, A.data.colptr, A.data.rowval, A.data.nzval,
-                     S.Cp, S.Ci, S.Lp, S.parent, S.Lnz, S.Li, S.Lx, S.d, S.Y, S.pattern, S.flag, S.P, S.pinv;
-                     dynamic_args...)
+                     S.Cp, S.Ci, S.Lp, S.parent, S.Lnz, S.Li, S.Lx, S.d, S.Y, S.pattern, S.flag, S.P, S.pinv,
+                     S.r1, S.r2, S.tol, S.n_d)
   return S
 end
 
 # convert dense to sparse
-ldl_factorize!(A::Symmetric{T,Array{T,2}}, S::LDLFactorization; dynamic_args...) where T<:Real = ldl_factorize!(Symmetric(sparse(A.data)), S; dynamic_args...)
+ldl_factorize!(A::Symmetric{T,Array{T,2}}, S::LDLFactorization) where T<:Real = ldl_factorize!(Symmetric(sparse(A.data)), S)
 
 # symmetric matrix input
 function ldl(sA::Symmetric{T,SparseMatrixCSC{T,Ti}}, P::Vector{Tp}) where {T<:Real,Ti<:Integer,Tp<:Integer}
@@ -541,7 +545,8 @@ function ldl_analyze(A::SparseMatrixCSC{T,Ti}, P::Vector{Tp}) where {T<:Real,Ti<
   D = T[]
   Y = T[]
   pattern = Ti[]
-  return LDLFactorization(true, false, false, n, parent, Lnz, flag, P, pinv, Lp, Cp, Ci, Li, Lx, D, Y, pattern)
+  return LDLFactorization(true, false, false, n, parent, Lnz, flag, P, pinv, Lp, Cp, Ci, Li, Lx, D, Y, pattern,
+                          zero(T), zero(T), zero(T), n)
 end
 
 # convert dense to sparse

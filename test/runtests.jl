@@ -200,7 +200,11 @@ end
   b = M * ones(10)
   x = copy(b)
   S = ldl_analyze(Symmetric(triu(M), :U))
-  S = ldl_factorize!(Symmetric(triu(M), :U), S, tol=1e-8, r1=0., r2=1e-8, n_d=0)
+  S.r1 = -1e-8
+  S.r2 = 1e-8
+  S.tol = 1e-8
+  S.n_d = 0
+  S = ldl_factorize!(Symmetric(triu(M), :U), S)
   x = ldiv!(S, x)
   r = M * x - b
   @test norm(r) ≤ sqrt(eps()) * norm(b)
@@ -225,7 +229,11 @@ end
   b = M * ones(20)
   x = copy(b)
   S = ldl_analyze(Symmetric(triu(M), :U))
-  S = ldl_factorize!(Symmetric(triu(M), :U), S, tol=1e-8, r1=-1e-8, r2=1e-8, n_d=0)
+  S.r1 = -1e-8
+  S.r2 = 1e-8
+  S.tol = 1e-8
+  S.n_d = 0
+  S = ldl_factorize!(Symmetric(triu(M), :U), S)
   x = ldiv!(S, x)
   r = M * x - b
   @test norm(r) ≤ sqrt(eps()) * norm(b)
