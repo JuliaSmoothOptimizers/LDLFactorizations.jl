@@ -196,13 +196,14 @@ end
        0.   0.   0.   5.   7.   9.   0.   2.   7.   1.
        3.   2.   0.   0.   0.   0.   1.   3.   3.   2.
        0.   0.   0.   0.  -3   -4    0.   0.   0.   0. ]
+  ϵ = sqrt(eps(eltype(A)))
   M = A * A'  # det(A) = 0 => M positive semidefinite
   b = M * ones(10)
   x = copy(b)
   S = ldl_analyze(Symmetric(triu(M), :U))
-  S.r1 = -1e-8
-  S.r2 = 1e-8
-  S.tol = 1e-8
+  S.r1 = -ϵ
+  S.r2 = ϵ
+  S.tol = ϵ
   S.n_d = 0
   S = ldl_factorize!(Symmetric(triu(M), :U), S)
   x = ldiv!(S, x)
@@ -221,6 +222,7 @@ end
        0.   0.   0.   5.   7.   9.   0.   2.   7.   1.
        3.   2.   0.   0.   0.   0.   1.   3.   3.   2.
        0.   0.   0.   0.  -3   -4    0.   0.   0.   0. ]
+  ϵ = sqrt(eps(eltype(A)))
   M = spzeros(20, 20)
   M[1:10, 1:10] = -A * A'
   M[11:20, 11:20] = A * A'
@@ -229,9 +231,9 @@ end
   b = M * ones(20)
   x = copy(b)
   S = ldl_analyze(Symmetric(triu(M), :U))
-  S.r1 = -1e-8
-  S.r2 = 1e-8
-  S.tol = 1e-8
+  S.r1 = -ϵ
+  S.r2 = ϵ
+  S.tol = ϵ
   S.n_d = 0
   S = ldl_factorize!(Symmetric(triu(M), :U), S)
   x = ldiv!(S, x)
