@@ -129,7 +129,7 @@ end
 
 function ldl_numeric_upper!(n, Ap, Ai, Ax, Cp, Ci, Lp, parent, Lnz, Li, Lx, D, Y,
                             pattern, flag, P, Pinv, r1, r2, tol, n_d)
-  dynamic_reg = r1 > 0 || r2 > 0 
+  dynamic_reg = r1 != 0 || r2 != 0 
   @inbounds for k = 1:n
     Y[k] = 0
     top = n+1

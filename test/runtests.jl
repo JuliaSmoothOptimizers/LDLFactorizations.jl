@@ -234,7 +234,37 @@ end
   S.r1 = -ϵ
   S.r2 = ϵ
   S.tol = ϵ
-  S.n_d = 0
+  S.n_d = 10
+  S = ldl_factorize!(Symmetric(triu(M), :U), S)
+  x = ldiv!(S, x)
+  r = M * x - b
+  @test norm(r) ≤ sqrt(eps()) * norm(b)
+end
+
+@testset "SQD_semi_dynamic" begin
+  A = [0.   0.   0.   0.   0.   0.   0.   0.   4.   0.
+       0.   0.   0.   0.   0.   0.   0.   0.   5.   0.
+       2.   4.   5.   -2   4.   1.   2.   2.   2.   0.
+       0.   0.   0.   0.   1.   9.   9.   1.   7.   1.
+       0.   0.   0.   0.   0.   0.   0.   0.   1.   0.
+       1.   3.   2.   1.   4.   3.   1.   0.   0.   7.
+       -3.  8.   0.   0.   0.   0.   -2.  0.   0.   1.
+       0.   0.   0.   5.   7.   9.   0.   2.   7.   1.
+       3.   2.   0.   0.   0.   0.   1.   3.   3.   2.
+       0.   0.   0.   0.  -3   -4    0.   0.   0.   0. ]
+  ϵ = sqrt(eps(eltype(A)))
+  M = spzeros(20, 20)
+  M[1:10, 1:10] = A * A' + ϵ*I
+  M[11:20, 11:20] = -A * A'
+  # M = [-A*A'    0
+  #        0     A*A'] where A*A' is symmetric positive semidefinite
+  b = M * ones(20)
+  x = copy(b)
+  S = ldl_analyze(Symmetric(triu(M), :U))
+  S.r1 = zero(eltype(A))
+  S.r2 = -ϵ
+  S.tol = ϵ
+  S.n_d = 10
   S = ldl_factorize!(Symmetric(triu(M), :U), S)
   x = ldiv!(S, x)
   r = M * x - b
