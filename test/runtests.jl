@@ -254,15 +254,15 @@ end
        0.   0.   0.   0.  -3   -4    0.   0.   0.   0. ]
   ϵ = sqrt(eps(eltype(A)))
   M = spzeros(20, 20)
-  M[1:10, 1:10] = -A * A' - ϵ*I
-  M[11:20, 11:20] = A * A'
+  M[1:10, 1:10] = A * A' + ϵ*I
+  M[11:20, 11:20] = -A * A'
   # M = [-A*A'    0
   #        0     A*A'] where A*A' is symmetric positive semidefinite
   b = M * ones(20)
   x = copy(b)
   S = ldl_analyze(Symmetric(triu(M), :U))
   S.r1 = zero(eltype(A))
-  S.r2 = ϵ
+  S.r2 = -ϵ
   S.tol = ϵ
   S.n_d = 10
   S = ldl_factorize!(Symmetric(triu(M), :U), S)
