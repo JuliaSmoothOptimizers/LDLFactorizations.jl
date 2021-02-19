@@ -457,12 +457,12 @@ function ldl_analyze(A::Symmetric{T,SparseMatrixCSC{T,Ti}}, P::Vector{Tp}) where
   ldl_symbolic_upper!(n, A.data.colptr, A.data.rowval, Cp, Ci, Lp, parent, Lnz, flag, P, pinv)
 
   # space for numerical factorization will be allocated later
-  Li = Ti[]
-  Lx = T[]
-  D = T[]
-  Y = T[]
-  pattern = Ti[]
-  return LDLFactorization(true, false, true, n, parent, Lnz, flag, P, pinv, Lp, Cp, Ci, Li, Lx, D, Y, pattern,
+  Li = Vector{Ti}(undef, Lp[n] - 1)
+  Lx = Vector{T}(undef, Lp[n] - 1)
+  d = Vector{T}(undef, n)
+  Y = Vector{T}(undef, n)
+  pattern = Vector{Ti}(undef, n)
+  return LDLFactorization(true, false, true, n, parent, Lnz, flag, P, pinv, Lp, Cp, Ci, Li, Lx, d, Y, pattern,
                           zero(T), zero(T), zero(T), n)
 end
 
@@ -478,15 +478,6 @@ function ldl_factorize!(A::Symmetric{T,SparseMatrixCSC{T,Ti}},
   S.__analyzed || error("perform symbolic analysis prior to numerical factorization")
   n = size(A, 1)
   n == S.n || throw(DimensionMismatch("matrix size is inconsistent with symbolic analysis object"))
-
-  # allocate space for numerical factorization if not already done
-  if !(S.__factorized)
-    S.Li = Vector{Ti}(undef, S.Lp[n] - 1)
-    S.Lx = Vector{T}(undef, S.Lp[n] - 1)
-    S.d = Vector{T}(undef, n)
-    S.Y = Vector{T}(undef, n)
-    S.pattern = Vector{Ti}(undef, n)
-  end
 
   # perform numerical factorization
   ldl_numeric_upper!(S.n, A.data.colptr, A.data.rowval, A.data.nzval,
@@ -540,12 +531,12 @@ function ldl_analyze(A::SparseMatrixCSC{T,Ti}, P::Vector{Tp}) where {T<:Real,Ti<
   ldl_symbolic!(n, A.colptr, A.rowval, Lp, parent, Lnz, flag, P, pinv)
 
   # space for numerical factorization will be allocated later
-  Li = Ti[]
-  Lx = T[]
-  D = T[]
-  Y = T[]
-  pattern = Ti[]
-  return LDLFactorization(true, false, false, n, parent, Lnz, flag, P, pinv, Lp, Cp, Ci, Li, Lx, D, Y, pattern,
+  Li = Vector{Ti}(undef, Lp[n] - 1)
+  Lx = Vector{T}(undef, Lp[n] - 1)
+  d = Vector{T}(undef, n)
+  Y = Vector{T}(undef, n)
+  pattern = Vector{Ti}(undef, n)
+  return LDLFactorization(true, false, false, n, parent, Lnz, flag, P, pinv, Lp, Cp, Ci, Li, Lx, d, Y, pattern,
                           zero(T), zero(T), zero(T), n)
 end
 
@@ -562,14 +553,6 @@ function ldl_factorize!(A::SparseMatrixCSC{T,Ti},
   S.__analyzed || error("perform symbolic analysis prior to numerical factorization")
   n = size(A, 1)
   n == S.n || throw(DimensionMismatch("matrix size is inconsistent with symbolic analysis object"))
-
-  if !(S.__factorized)
-    S.Li = Vector{Ti}(undef, S.Lp[n] - 1)
-    S.Lx = Vector{T}(undef, S.Lp[n] - 1)
-    S.d = Vector{T}(undef, n)
-    S.Y = Vector{T}(undef, n)
-    S.pattern = Vector{Ti}(undef, n)
-  end
 
   ldl_numeric!(S.n, A.colptr, A.rowval, A.nzval, S.Lp, S.parent, S.Lnz,
                S.Li, S.Lx, S.d, S.Y, S.pattern, S.flag, S.P, S.pinv)

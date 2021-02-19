@@ -271,6 +271,26 @@ end
   @test norm(r) ≤ sqrt(eps()) * norm(b)
 end
 
+@testset "Test booleans and allocations" begin
+  A = spdiagm(0 => 2 * ones(10), 1 => -ones(9))
+  ϵ = √eps()
+  M1 = spzeros(20, 20)
+  M1[1:10, 1:10] = A
+  M1[11:20, 11:20] = spdiagm(0 => -ϵ * ones(10))
+  M2 = spzeros(20, 20)
+  M2[1:10, 1:10] = A
+  M2[11:20, 11:20] = spdiagm(0 => -100ϵ * ones(10))
+
+  S = ldl_analyze(M1)
+  @test S.__analyzed
+  @test !S.__factorized
+  _allocs1 = @allocated ldl_factorize!(M1, S)
+  @test S.d[11:20] ≈ -ϵ * ones(10)
+  _allocs2 = @allocated ldl_factorize!(M2, S)
+  @test S.d[11:20] ≈ -100ϵ * ones(10)
+  @test _allocs1 == _allocs2
+end
+
 @testset "ldl_mul!" begin
   A0 = [0.   0.   0.   0.   0.   0.   0.   0.   4.   0.
         0.   0.   1.   0.   0.   0.   0.   0.   5.   0.
