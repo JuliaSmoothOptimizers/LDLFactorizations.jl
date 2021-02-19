@@ -486,6 +486,7 @@ function ldl_factorize!(A::Symmetric{T,SparseMatrixCSC{T,Ti}},
     S.d = Vector{T}(undef, n)
     S.Y = Vector{T}(undef, n)
     S.pattern = Vector{Ti}(undef, n)
+    S.__factorized = true
   end
 
   # perform numerical factorization
@@ -569,6 +570,7 @@ function ldl_factorize!(A::SparseMatrixCSC{T,Ti},
     S.d = Vector{T}(undef, n)
     S.Y = Vector{T}(undef, n)
     S.pattern = Vector{Ti}(undef, n)
+    S.__factorized = true
   end
 
   ldl_numeric!(S.n, A.colptr, A.rowval, A.nzval, S.Lp, S.parent, S.Lnz,
