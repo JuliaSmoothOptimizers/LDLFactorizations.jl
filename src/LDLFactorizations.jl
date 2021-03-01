@@ -480,9 +480,11 @@ function ldl_factorize!(A::Symmetric{T,SparseMatrixCSC{T,Ti}},
   n == S.n || throw(DimensionMismatch("matrix size is inconsistent with symbolic analysis object"))
 
   # perform numerical factorization
+  S.__factorized = false
   ldl_numeric_upper!(S.n, A.data.colptr, A.data.rowval, A.data.nzval,
                      S.Cp, S.Ci, S.Lp, S.parent, S.Lnz, S.Li, S.Lx, S.d, S.Y, S.pattern, S.flag, S.P, S.pinv,
                      S.r1, S.r2, S.tol, S.n_d)
+  S.__factorized = true
   return S
 end
 
@@ -554,8 +556,10 @@ function ldl_factorize!(A::SparseMatrixCSC{T,Ti},
   n = size(A, 1)
   n == S.n || throw(DimensionMismatch("matrix size is inconsistent with symbolic analysis object"))
 
+  S.__factorized = false
   ldl_numeric!(S.n, A.colptr, A.rowval, A.nzval, S.Lp, S.parent, S.Lnz,
                S.Li, S.Lx, S.d, S.Y, S.pattern, S.flag, S.P, S.pinv)
+  S.__factorized = true
   return S
 end
 
@@ -570,47 +574,55 @@ end
 import Base.(\)
 function (\)(LDL::LDLFactorization{T,Ti,Tn,Tp}, b::AbstractVector{T}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
   y = copy(b)
+  LDL.__factorized || throw(SQDException("Compute LDL' factorization before solving"))
   ldl_solve!(LDL.n, y, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
 end
 
 function (\)(LDL::LDLFactorization{T,Ti,Tn,Tp}, B::AbstractMatrix{T}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
   Y = copy(B)
+  LDL.__factorized || throw(SQDException("Compute LDL' factorization before solving"))
   ldl_solve!(LDL.n, Y, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
 end
 
 import LinearAlgebra.ldiv!
 @inline ldiv!(LDL::LDLFactorization{T,Ti,Tn,Tp}, b::AbstractVector{T}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer} =
-  ldl_solve!(LDL.n, b, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
+  LDL.__factorized ? ldl_solve!(LDL.n, b, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P) : throw(SQDException("Compute LDL' factorization before solving"))
 
 @inline ldiv!(LDL::LDLFactorization{T,Ti,Tn,Tp}, B::AbstractMatrix{T}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer} =
-  ldl_solve!(LDL.n, B, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
+  LDL.__factorized ? ldl_solve!(LDL.n, B, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P) : throw(SQDException("Compute LDL' factorization before solving"))
 
 function ldiv!(y::AbstractVector{T}, LDL::LDLFactorization{T,Ti,Tn,Tp}, b::AbstractVector{T}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
   y .= b
+  LDL.__factorized || throw(SQDException("Compute LDL' factorization prior solve"))
   ldl_solve!(LDL.n, y, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
 end
 
 function ldiv!(Y::AbstractMatrix{T}, LDL::LDLFactorization{T,Ti}, B::AbstractMatrix{T}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
   Y .= B
+  LDL.__factorized || throw(SQDException("Compute LDL' factorization before solving"))
   ldl_solve!(LDL.n, Y, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
 end
 
 import LinearAlgebra.lmul!, LinearAlgebra.mul!
 function lmul!(LDL::LDLFactorization{T,Ti,Tn,Tp}, x::AbstractVector{T}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
+  LDL.__factorized || throw(SQDException("Compute LDL' factorization before the multiplication"))
   ldl_mul!(LDL.n, x, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
 end
 
 function lmul!(LDL::LDLFactorization{T,Ti,Tn,Tp}, X::AbstractMatrix{T}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
+  LDL.__factorized || throw(SQDException("Compute LDL' factorization before the multiplication"))
   ldl_mul!(LDL.n, X, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
 end
 
 function mul!(y::AbstractVector{T}, LDL::LDLFactorization{T,Ti,Tn,Tp}, x::AbstractVector{T}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
   y .= x
+  LDL.__factorized || throw(SQDException("Compute LDL' factorization before the multiplication"))
   ldl_mul!(LDL.n, y, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
 end
 
 function mul!(Y::AbstractMatrix{T}, LDL::LDLFactorization{T,Ti,Tn,Tp}, X::AbstractMatrix{T}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
   Y .= X
+  LDL.__factorized || throw(SQDException("Compute LDL' factorization before the multiplication"))
   ldl_mul!(LDL.n, Y, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
 end
 
