@@ -1,6 +1,6 @@
 module LDLFactorizations
 
-export ldl, ldl_analyze, ldl_factorize!, \, ldiv!, lmul!, mul!, nnz
+export ldl, ldl_analyze, ldl_factorize!, factorized, \, ldiv!, lmul!, mul!, nnz
 
 using AMD, LinearAlgebra, SparseArrays
 
@@ -428,6 +428,8 @@ mutable struct LDLFactorization{T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
   tol::T
   n_d::Tn
 end
+
+factorized(LDL::LDLFactorization{T,Ti,Tn,Tp}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer} = LDL.__factorized
 
 # perform symbolic analysis so it can be reused
 function ldl_analyze(A::Symmetric{T,SparseMatrixCSC{T,Ti}}, P::Vector{Tp}) where {T<:Real,Ti<:Integer,Tp<:Integer}
