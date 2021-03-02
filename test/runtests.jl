@@ -300,6 +300,8 @@ end
   b = ones(20)
   @test_throws LDLFactorizations.SQDException ldiv!(S, b)
   @test_throws LDLFactorizations.SQDException lmul!(S, b)
+  B = ones(20, 2)
+  @test_throws LDLFactorizations.SQDException ldiv!(S, B)
 end
 
 @testset "ldl_mul!" begin
