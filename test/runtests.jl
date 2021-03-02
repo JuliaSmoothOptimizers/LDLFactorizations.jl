@@ -285,18 +285,15 @@ end
   M3[11:20, 11:20] = spdiagm(0 => zeros(10))
 
   S = ldl_analyze(M1)
-  @test S.__analyzed
-  @test !S.__factorized
+  @test !factorized(S)
   _allocs1 = @allocated ldl_factorize!(M1, S)
   @test S.d[11:20] ≈ -ϵ * ones(10)
-  @test S.__factorized
+  @test factorized(S)
   _allocs2 = @allocated ldl_factorize!(M2, S)
   @test S.d[11:20] ≈ -100ϵ * ones(10)
   @test _allocs1 == _allocs2
-
   @test_throws LDLFactorizations.SQDException ldl_factorize!(M3, S)
-  @test !S.__factorized
-
+  @test !factorized(S)
   b = ones(20)
   @test_throws LDLFactorizations.SQDException ldiv!(S, b)
   @test_throws LDLFactorizations.SQDException lmul!(S, b)
