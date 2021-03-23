@@ -8,6 +8,8 @@ mutable struct SQDException <: Exception
   msg::String
 end
 
+const error_string = "LDL' factorization was not computed or failed"
+
 """
     col_symb!(n, Ap, Ai, Cp, w, Pinv)
 Compute the sparse structure of missing elements of the upper triangle of PAPt. Nonzero elements have to verify Pinv[i] < Pinv[j] where i is the
@@ -197,8 +199,9 @@ function ldl_numeric_upper!(n, Ap, Ai, Ax, Cp, Ci, Lp, parent, Lnz, Li, Lx, D, Y
       r = P[k] <= n_d ? r1 : r2
       D[k] = sign(r) * max(abs(D[k] + r), abs(r))
     end
-    D[k] == 0 && throw(SQDException("matrix does not possess a LDL' factorization for this permutation"))
+    D[k] == 0 && return false
   end
+  return true
 end
 
 function ldl_numeric!(n, Ap, Ai, Ax, Lp, parent, Lnz, Li, Lx, D, Y,
@@ -243,8 +246,9 @@ function ldl_numeric!(n, Ap, Ai, Ax, Lp, parent, Lnz, Li, Lx, D, Y,
       Lnz[i] += 1
       top += 1
     end
-    D[k] == 0 && throw(SQDException("matrix does not possess a LDL' factorization for this permutation"))
+    D[k] == 0 && return false
   end
+  return true
 end
 
 # solve functions for a single rhs
@@ -482,11 +486,9 @@ function ldl_factorize!(A::Symmetric{T,SparseMatrixCSC{T,Ti}},
   n == S.n || throw(DimensionMismatch("matrix size is inconsistent with symbolic analysis object"))
 
   # perform numerical factorization
-  S.__factorized = false
-  ldl_numeric_upper!(S.n, A.data.colptr, A.data.rowval, A.data.nzval,
-                     S.Cp, S.Ci, S.Lp, S.parent, S.Lnz, S.Li, S.Lx, S.d, S.Y, S.pattern, S.flag, S.P, S.pinv,
-                     S.r1, S.r2, S.tol, S.n_d)
-  S.__factorized = true
+  S.__factorized = ldl_numeric_upper!(S.n, A.data.colptr, A.data.rowval, A.data.nzval,
+                                      S.Cp, S.Ci, S.Lp, S.parent, S.Lnz, S.Li, S.Lx, S.d, S.Y, S.pattern, S.flag, S.P, S.pinv,
+                                      S.r1, S.r2, S.tol, S.n_d)
   return S
 end
 
@@ -558,10 +560,8 @@ function ldl_factorize!(A::SparseMatrixCSC{T,Ti},
   n = size(A, 1)
   n == S.n || throw(DimensionMismatch("matrix size is inconsistent with symbolic analysis object"))
 
-  S.__factorized = false
-  ldl_numeric!(S.n, A.colptr, A.rowval, A.nzval, S.Lp, S.parent, S.Lnz,
-               S.Li, S.Lx, S.d, S.Y, S.pattern, S.flag, S.P, S.pinv)
-  S.__factorized = true
+  S.__factorized = ldl_numeric!(S.n, A.colptr, A.rowval, A.nzval, S.Lp, S.parent, S.Lnz,
+                                S.Li, S.Lx, S.d, S.Y, S.pattern, S.flag, S.P, S.pinv)
   return S
 end
 
@@ -576,55 +576,55 @@ end
 import Base.(\)
 function (\)(LDL::LDLFactorization{T,Ti,Tn,Tp}, b::AbstractVector{T}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
   y = copy(b)
-  LDL.__factorized || throw(SQDException("Compute LDL' factorization before solving"))
+  LDL.__factorized || throw(SQDException(error_string))
   ldl_solve!(LDL.n, y, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
 end
 
 function (\)(LDL::LDLFactorization{T,Ti,Tn,Tp}, B::AbstractMatrix{T}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
   Y = copy(B)
-  LDL.__factorized || throw(SQDException("Compute LDL' factorization before solving"))
+  LDL.__factorized || throw(SQDException(error_string))
   ldl_solve!(LDL.n, Y, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
 end
 
 import LinearAlgebra.ldiv!
 @inline ldiv!(LDL::LDLFactorization{T,Ti,Tn,Tp}, b::AbstractVector{T}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer} =
-  LDL.__factorized ? ldl_solve!(LDL.n, b, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P) : throw(SQDException("Compute LDL' factorization before solving"))
+  LDL.__factorized ? ldl_solve!(LDL.n, b, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P) : throw(SQDException(error_string))
 
 @inline ldiv!(LDL::LDLFactorization{T,Ti,Tn,Tp}, B::AbstractMatrix{T}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer} =
-  LDL.__factorized ? ldl_solve!(LDL.n, B, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P) : throw(SQDException("Compute LDL' factorization before solving"))
+  LDL.__factorized ? ldl_solve!(LDL.n, B, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P) : throw(SQDException(error_string))
 
 function ldiv!(y::AbstractVector{T}, LDL::LDLFactorization{T,Ti,Tn,Tp}, b::AbstractVector{T}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
   y .= b
-  LDL.__factorized || throw(SQDException("Compute LDL' factorization prior solve"))
+  LDL.__factorized || throw(SQDException(error_string))
   ldl_solve!(LDL.n, y, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
 end
 
 function ldiv!(Y::AbstractMatrix{T}, LDL::LDLFactorization{T,Ti}, B::AbstractMatrix{T}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
   Y .= B
-  LDL.__factorized || throw(SQDException("Compute LDL' factorization before solving"))
+  LDL.__factorized || throw(SQDException(error_string))
   ldl_solve!(LDL.n, Y, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
 end
 
 import LinearAlgebra.lmul!, LinearAlgebra.mul!
 function lmul!(LDL::LDLFactorization{T,Ti,Tn,Tp}, x::AbstractVector{T}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
-  LDL.__factorized || throw(SQDException("Compute LDL' factorization before the multiplication"))
+  LDL.__factorized || throw(SQDException(error_string))
   ldl_mul!(LDL.n, x, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
 end
 
 function lmul!(LDL::LDLFactorization{T,Ti,Tn,Tp}, X::AbstractMatrix{T}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
-  LDL.__factorized || throw(SQDException("Compute LDL' factorization before the multiplication"))
+  LDL.__factorized || throw(SQDException(error_string))
   ldl_mul!(LDL.n, X, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
 end
 
 function mul!(y::AbstractVector{T}, LDL::LDLFactorization{T,Ti,Tn,Tp}, x::AbstractVector{T}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
   y .= x
-  LDL.__factorized || throw(SQDException("Compute LDL' factorization before the multiplication"))
+  LDL.__factorized || throw(SQDException(error_string))
   ldl_mul!(LDL.n, y, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
 end
 
 function mul!(Y::AbstractMatrix{T}, LDL::LDLFactorization{T,Ti,Tn,Tp}, X::AbstractMatrix{T}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
   Y .= X
-  LDL.__factorized || throw(SQDException("Compute LDL' factorization before the multiplication"))
+  LDL.__factorized || throw(SQDException(error_string))
   ldl_mul!(LDL.n, Y, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
 end
 
