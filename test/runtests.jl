@@ -44,11 +44,13 @@ end
   # this matrix does not possess an LDLᵀ factorization without pivoting
   A = [ 0 1
         1 1 ]
-  @test_throws LDLFactorizations.SQDException ldl(A, [1, 2])
+  S = ldl(A, [1, 2])
+  @test !factorized(S)
 
   A = Symmetric(sparse(triu(A)))
   S = ldl_analyze(A)
-  @test_throws LDLFactorizations.SQDException ldl_factorize!(A, S)
+  ldl_factorize!(A, S)
+  @test !factorized(S)
 end
 
 @testset "sparse" begin
@@ -163,12 +165,12 @@ end
   # this matrix does not possess an LDLᵀ factorization without pivoting
   A = triu([ 0 1
             1 1 ])
-  @test_throws LDLFactorizations.SQDException ldl(A, [1, 2])
+  S = ldl(A, [1, 2])
+  @test !factorized(S)
 
   S = ldl_analyze(Symmetric(A, :U))
-  S.avoid_break = true
   ldl_factorize!(Symmetric(A, :U), S)
-  @test S.__factorized == false
+  @test !S.__factorized
 end
 
 @testset "sparse_upper" begin
@@ -297,7 +299,7 @@ end
   _allocs2 = @allocated ldl_factorize!(M2, S)
   @test S.d[11:20] ≈ -100ϵ * ones(10)
   @test _allocs1 == _allocs2
-  @test_throws LDLFactorizations.SQDException ldl_factorize!(M3, S)
+  ldl_factorize!(M3, S)
   @test !factorized(S)
   b = ones(20)
   @test_throws LDLFactorizations.SQDException ldiv!(S, b)
