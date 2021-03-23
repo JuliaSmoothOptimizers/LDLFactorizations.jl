@@ -15,6 +15,7 @@ jobs:
         pkg: [
           "JuliaSmoothOptimizers/DCI.jl",
           "JuliaSmoothOptimizers/CaNNOLeS.jl"
+          "JuliaSmoothOptimizers/RipQP.jl"
         ]
         pkgversion: [latest, stable]
 
