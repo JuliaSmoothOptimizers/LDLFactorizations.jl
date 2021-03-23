@@ -164,6 +164,11 @@ end
   A = triu([ 0 1
             1 1 ])
   @test_throws LDLFactorizations.SQDException ldl(A, [1, 2])
+
+  S = ldl_analyze(Symmetric(A, :U))
+  S.avoid_break = true
+  ldl_factorize!(Symmetric(A, :U), S)
+  @test S.__factorized == false
 end
 
 @testset "sparse_upper" begin

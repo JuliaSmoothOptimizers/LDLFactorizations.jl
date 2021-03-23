@@ -197,8 +197,9 @@ function ldl_numeric_upper!(n, Ap, Ai, Ax, Cp, Ci, Lp, parent, Lnz, Li, Lx, D, Y
       r = P[k] <= n_d ? r1 : r2
       D[k] = sign(r) * max(abs(D[k] + r), abs(r))
     end
-    D[k] == 0 && throw(SQDException("matrix does not possess a LDL' factorization for this permutation"))
+    D[k] == 0 && return 1
   end
+  return 0
 end
 
 function ldl_numeric!(n, Ap, Ai, Ax, Lp, parent, Lnz, Li, Lx, D, Y,
@@ -427,6 +428,8 @@ mutable struct LDLFactorization{T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
   r2::T
   tol::T
   n_d::Tn
+  # to avoid the code from breaking if the factorization fails
+  avoid_break :: Bool
 end
 
 factorized(LDL::LDLFactorization{T,Ti,Tn,Tp}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer} = LDL.__factorized
@@ -465,7 +468,7 @@ function ldl_analyze(A::Symmetric{T,SparseMatrixCSC{T,Ti}}, P::Vector{Tp}) where
   Y = Vector{T}(undef, n)
   pattern = Vector{Ti}(undef, n)
   return LDLFactorization(true, false, true, n, parent, Lnz, flag, P, pinv, Lp, Cp, Ci, Li, Lx, d, Y, pattern,
-                          zero(T), zero(T), zero(T), n)
+                          zero(T), zero(T), zero(T), n, false)
 end
 
 # convert dense to sparse
@@ -483,10 +486,14 @@ function ldl_factorize!(A::Symmetric{T,SparseMatrixCSC{T,Ti}},
 
   # perform numerical factorization
   S.__factorized = false
-  ldl_numeric_upper!(S.n, A.data.colptr, A.data.rowval, A.data.nzval,
-                     S.Cp, S.Ci, S.Lp, S.parent, S.Lnz, S.Li, S.Lx, S.d, S.Y, S.pattern, S.flag, S.P, S.pinv,
-                     S.r1, S.r2, S.tol, S.n_d)
-  S.__factorized = true
+  out = ldl_numeric_upper!(S.n, A.data.colptr, A.data.rowval, A.data.nzval,
+                           S.Cp, S.Ci, S.Lp, S.parent, S.Lnz, S.Li, S.Lx, S.d, S.Y, S.pattern, S.flag, S.P, S.pinv,
+                           S.r1, S.r2, S.tol, S.n_d)
+  if out == 0 
+    S.__factorized = true
+  elseif out == 1 && S.avoid_break == false
+    throw(SQDException("matrix does not possess a LDL' factorization for this permutation"))
+  end
   return S
 end
 
@@ -541,7 +548,7 @@ function ldl_analyze(A::SparseMatrixCSC{T,Ti}, P::Vector{Tp}) where {T<:Real,Ti<
   Y = Vector{T}(undef, n)
   pattern = Vector{Ti}(undef, n)
   return LDLFactorization(true, false, false, n, parent, Lnz, flag, P, pinv, Lp, Cp, Ci, Li, Lx, d, Y, pattern,
-                          zero(T), zero(T), zero(T), n)
+                          zero(T), zero(T), zero(T), n, false)
 end
 
 # convert dense to sparse
