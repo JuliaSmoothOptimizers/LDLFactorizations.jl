@@ -197,9 +197,9 @@ function ldl_numeric_upper!(n, Ap, Ai, Ax, Cp, Ci, Lp, parent, Lnz, Li, Lx, D, Y
       r = P[k] <= n_d ? r1 : r2
       D[k] = sign(r) * max(abs(D[k] + r), abs(r))
     end
-    D[k] == 0 && return 1
+    D[k] == 0 && return false
   end
-  return 0
+  return true
 end
 
 function ldl_numeric!(n, Ap, Ai, Ax, Lp, parent, Lnz, Li, Lx, D, Y,
@@ -486,14 +486,11 @@ function ldl_factorize!(A::Symmetric{T,SparseMatrixCSC{T,Ti}},
 
   # perform numerical factorization
   S.__factorized = false
-  out = ldl_numeric_upper!(S.n, A.data.colptr, A.data.rowval, A.data.nzval,
-                           S.Cp, S.Ci, S.Lp, S.parent, S.Lnz, S.Li, S.Lx, S.d, S.Y, S.pattern, S.flag, S.P, S.pinv,
-                           S.r1, S.r2, S.tol, S.n_d)
-  if out == 0 
-    S.__factorized = true
-  elseif out == 1 && S.avoid_break == false
-    throw(SQDException("matrix does not possess a LDL' factorization for this permutation"))
-  end
+  S.__factorized = ldl_numeric_upper!(S.n, A.data.colptr, A.data.rowval, A.data.nzval,
+                                      S.Cp, S.Ci, S.Lp, S.parent, S.Lnz, S.Li, S.Lx, S.d, S.Y, S.pattern, S.flag, S.P, S.pinv,
+                                      S.r1, S.r2, S.tol, S.n_d)
+
+  !S.__factorized && !S.avoid_break && throw(SQDException("matrix does not possess a LDL' factorization for this permutation"))
   return S
 end
 
