@@ -1,7 +1,7 @@
 using Documenter, LDLFactorizations
 
 makedocs(
-  modules = [LinearOperators],
+  modules = [LDLFactorizations],
   doctest = true,
   # linkcheck = true,
   strict = true,
