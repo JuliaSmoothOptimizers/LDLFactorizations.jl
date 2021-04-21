@@ -1,4 +1,4 @@
-using Documenter, LinearOperators
+using Documenter, LDLFactorizations
 
 makedocs(
   modules = [LinearOperators],
