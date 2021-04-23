@@ -25,7 +25,7 @@ row index and j the column index. Those elements are the nonzeros of the lower t
 function col_symb!(n, Ap, Ai, Cp, w, Pinv)
   fill!(w, 0)
   @inbounds for j = 1:n
-    @inbounds for p = Ap[j] : (Ap[j+1]-1)
+    @inbounds for p = Ap[j]:(Ap[j + 1] - 1)
       i = Ai[p]
       i >= j && break  # only upper part
       Pinv[i] < Pinv[j] && continue  # store only what will be used during the factorization
@@ -35,7 +35,7 @@ function col_symb!(n, Ap, Ai, Cp, w, Pinv)
 
   Cp[1] = 1
   @inbounds for i = 1:n  # cumulative sum
-    Cp[i+1] = w[i] + Cp[i]
+    Cp[i + 1] = w[i] + Cp[i]
     w[i] = Cp[i]
   end
 end
@@ -55,9 +55,9 @@ row index and j the column index. Those elements are the nonzeros of the lower t
 """
 function col_num!(n, Ap, Ai, Ci, w, Pinv)
   @inbounds for j = 1:n
-    @inbounds for p = Ap[j] : (Ap[j+1]-1)
+    @inbounds for p = Ap[j]:(Ap[j + 1] - 1)
       i = Ai[p]
-      i >= j  && break  # only upper part
+      i >= j && break  # only upper part
       Pinv[i] < Pinv[j] && continue  # store only what will be used during the factorization
       Ci[w[i]] = j
       w[i] += 1
@@ -65,13 +65,13 @@ function col_num!(n, Ap, Ai, Ci, w, Pinv)
   end
 end
 
-function ldl_symbolic_upper!(n, Ap, Ai, Cp, Ci , Lp, parent, Lnz, flag, P, Pinv)
+function ldl_symbolic_upper!(n, Ap, Ai, Cp, Ci, Lp, parent, Lnz, flag, P, Pinv)
   @inbounds for k = 1:n
     parent[k] = -1
     flag[k] = k
     Lnz[k] = 0
     pk = P[k]
-    @inbounds for p = Ap[pk] : (Ap[pk+1] - 1)
+    @inbounds for p = Ap[pk]:(Ap[pk + 1] - 1)
       i = Pinv[Ai[p]]
       i ≥ k && continue
       @inbounds while flag[i] != k
@@ -85,34 +85,9 @@ function ldl_symbolic_upper!(n, Ap, Ai, Cp, Ci , Lp, parent, Lnz, flag, P, Pinv)
     end
 
     # Missing nonzero elements of the upper triangle
-    @inbounds for ind = Cp[pk] : (Cp[pk+1] - 1)
+    @inbounds for ind = Cp[pk]:(Cp[pk + 1] - 1)
       i = Pinv[Ci[ind]]
       i > k && continue
-      @inbounds while flag[i] != k
-        if parent[i] == -1
-          parent[i] = k
-        end
-      Lnz[i] += 1
-      flag[i] = k
-      i = parent[i]
-      end
-    end
-  end
-  Lp[1] = 1
-  @inbounds for k = 1:n
-    Lp[k+1] = Lp[k] + Lnz[k]
-  end
-end
-
-function ldl_symbolic!(n, Ap, Ai, Lp, parent, Lnz, flag, P, Pinv)
-  @inbounds for k = 1:n
-  parent[k] = -1
-  flag[k] = k
-  Lnz[k] = 0
-  pk = P[k]
-  @inbounds for p = Ap[pk] : (Ap[pk+1] - 1)
-    i = Pinv[Ai[p]]
-    i ≥ k && continue
       @inbounds while flag[i] != k
         if parent[i] == -1
           parent[i] = k
@@ -120,25 +95,71 @@ function ldl_symbolic!(n, Ap, Ai, Lp, parent, Lnz, flag, P, Pinv)
         Lnz[i] += 1
         flag[i] = k
         i = parent[i]
-        end
       end
     end
-    Lp[1] = 1
-    @inbounds for k = 1:n
-    Lp[k+1] = Lp[k] + Lnz[k]
+  end
+  Lp[1] = 1
+  @inbounds for k = 1:n
+    Lp[k + 1] = Lp[k] + Lnz[k]
   end
 end
 
-function ldl_numeric_upper!(n, Ap, Ai, Ax, Cp, Ci, Lp, parent, Lnz, Li, Lx, D, Y,
-                            pattern, flag, P, Pinv, r1, r2, tol, n_d)
-  dynamic_reg = r1 != 0 || r2 != 0 
+function ldl_symbolic!(n, Ap, Ai, Lp, parent, Lnz, flag, P, Pinv)
   @inbounds for k = 1:n
-    Y[k] = 0
-    top = n+1
+    parent[k] = -1
     flag[k] = k
     Lnz[k] = 0
     pk = P[k]
-    @inbounds for p = Ap[pk] : (Ap[pk+1] - 1)
+    @inbounds for p = Ap[pk]:(Ap[pk + 1] - 1)
+      i = Pinv[Ai[p]]
+      i ≥ k && continue
+      @inbounds while flag[i] != k
+        if parent[i] == -1
+          parent[i] = k
+        end
+        Lnz[i] += 1
+        flag[i] = k
+        i = parent[i]
+      end
+    end
+  end
+  Lp[1] = 1
+  @inbounds for k = 1:n
+    Lp[k + 1] = Lp[k] + Lnz[k]
+  end
+end
+
+function ldl_numeric_upper!(
+  n,
+  Ap,
+  Ai,
+  Ax,
+  Cp,
+  Ci,
+  Lp,
+  parent,
+  Lnz,
+  Li,
+  Lx,
+  D,
+  Y,
+  pattern,
+  flag,
+  P,
+  Pinv,
+  r1,
+  r2,
+  tol,
+  n_d,
+)
+  dynamic_reg = r1 != 0 || r2 != 0
+  @inbounds for k = 1:n
+    Y[k] = 0
+    top = n + 1
+    flag[k] = k
+    Lnz[k] = 0
+    pk = P[k]
+    @inbounds for p = Ap[pk]:(Ap[pk + 1] - 1)
       i = Pinv[Ai[p]]
       i > k && continue
       Y[i] += Ax[p]
@@ -156,11 +177,11 @@ function ldl_numeric_upper!(n, Ap, Ai, Ax, Cp, Ci, Lp, parent, Lnz, Li, Lx, D, Y
       end
     end
     # missing non zero elements of the upper triangle
-    @inbounds for ind = Cp[pk] : (Cp[pk+1] - 1)
+    @inbounds for ind = Cp[pk]:(Cp[pk + 1] - 1)
       i2 = Ci[ind]
       i = Pinv[i2]
       i > k && continue
-      @inbounds for p = Ap[i2] : (Ap[i2+1] - 1)
+      @inbounds for p = Ap[i2]:(Ap[i2 + 1] - 1)
         Ai[p] < pk && continue
         Y[i] += Ax[p]
         len = 1
@@ -184,7 +205,7 @@ function ldl_numeric_upper!(n, Ap, Ai, Ax, Cp, Ci, Lp, parent, Lnz, Li, Lx, D, Y
       i = pattern[top]
       yi = Y[i]
       Y[i] = 0
-      @inbounds for p = Lp[i] : (Lp[i] + Lnz[i] - 1)
+      @inbounds for p = Lp[i]:(Lp[i] + Lnz[i] - 1)
         Y[Li[p]] -= Lx[p] * yi
       end
       p = Lp[i] + Lnz[i]
@@ -204,20 +225,19 @@ function ldl_numeric_upper!(n, Ap, Ai, Ax, Cp, Ci, Lp, parent, Lnz, Li, Lx, D, Y
   return true
 end
 
-function ldl_numeric!(n, Ap, Ai, Ax, Lp, parent, Lnz, Li, Lx, D, Y,
-                      pattern, flag, P, Pinv)
+function ldl_numeric!(n, Ap, Ai, Ax, Lp, parent, Lnz, Li, Lx, D, Y, pattern, flag, P, Pinv)
   @inbounds for k = 1:n
     Y[k] = 0
     top = n + 1
     flag[k] = k
     Lnz[k] = 0
     pk = P[k]
-    @inbounds for p = Ap[pk] : (Ap[pk+1] - 1)
+    @inbounds for p = Ap[pk]:(Ap[pk + 1] - 1)
       i = Pinv[Ai[p]]
       i > k && continue
       Y[i] += Ax[p]
       len = 1
-      @inbounds  while flag[i] != k
+      @inbounds while flag[i] != k
         pattern[len] = i
         len += 1
         flag[i] = k
@@ -235,7 +255,7 @@ function ldl_numeric!(n, Ap, Ai, Ax, Lp, parent, Lnz, Li, Lx, D, Y,
       i = pattern[top]
       yi = Y[i]
       Y[i] = 0
-      @inbounds for p = Lp[i] : (Lp[i] + Lnz[i] - 1)
+      @inbounds for p = Lp[i]:(Lp[i] + Lnz[i] - 1)
         Y[Li[p]] -= Lx[p] * yi
       end
       p = Lp[i] + Lnz[i]
@@ -255,7 +275,7 @@ end
 function ldl_lsolve!(n, x::AbstractVector, Lp, Li, Lx)
   @inbounds for j = 1:n
     xj = x[j]
-    @inbounds for p = Lp[j] : (Lp[j+1] - 1)
+    @inbounds for p = Lp[j]:(Lp[j + 1] - 1)
       x[Li[p]] -= Lx[p] * xj
     end
   end
@@ -272,7 +292,7 @@ end
 function ldl_ltsolve!(n, x::AbstractVector, Lp, Li, Lx)
   @inbounds for j = n:-1:1
     xj = x[j]
-    @inbounds for p = Lp[j] : (Lp[j+1] - 1)
+    @inbounds for p = Lp[j]:(Lp[j + 1] - 1)
       xj -= Lx[p] * x[Li[p]]
     end
     x[j] = xj
@@ -289,9 +309,9 @@ function ldl_solve!(n, b::AbstractVector, Lp, Li, Lx, D, P)
 end
 
 # solve functions for multiple rhs
-function ldl_lsolve!(n, X::AbstractMatrix{T}, Lp, Li, Lx) where T
+function ldl_lsolve!(n, X::AbstractMatrix{T}, Lp, Li, Lx) where {T}
   @inbounds for j = 1:n
-    @inbounds for p = Lp[j] : (Lp[j+1] - 1)
+    @inbounds for p = Lp[j]:(Lp[j + 1] - 1)
       for k ∈ axes(X, 2)
         X[Li[p], k] -= Lx[p] * X[j, k]
       end
@@ -300,7 +320,7 @@ function ldl_lsolve!(n, X::AbstractMatrix{T}, Lp, Li, Lx) where T
   return X
 end
 
-function ldl_dsolve!(n, X::AbstractMatrix{T}, D) where T
+function ldl_dsolve!(n, X::AbstractMatrix{T}, D) where {T}
   @inbounds for j = 1:n
     for k ∈ axes(X, 2)
       X[j, k] /= D[j]
@@ -309,9 +329,9 @@ function ldl_dsolve!(n, X::AbstractMatrix{T}, D) where T
   return X
 end
 
-function ldl_ltsolve!(n, X::AbstractMatrix{T}, Lp, Li, Lx) where T
+function ldl_ltsolve!(n, X::AbstractMatrix{T}, Lp, Li, Lx) where {T}
   @inbounds for j = n:-1:1
-    @inbounds for p = Lp[j] : (Lp[j+1] - 1)
+    @inbounds for p = Lp[j]:(Lp[j + 1] - 1)
       for k ∈ axes(X, 2)
         X[j, k] -= Lx[p] * X[Li[p], k]
       end
@@ -320,7 +340,7 @@ function ldl_ltsolve!(n, X::AbstractMatrix{T}, Lp, Li, Lx) where T
   return X
 end
 
-function ldl_solve!(n, B::AbstractMatrix{T}, Lp, Li, Lx, D, P) where T
+function ldl_solve!(n, B::AbstractMatrix{T}, Lp, Li, Lx, D, P) where {T}
   @views Y = B[P, :]
   ldl_lsolve!(n, Y, Lp, Li, Lx)
   ldl_dsolve!(n, Y, D)
@@ -330,83 +350,83 @@ end
 
 # compute L*D*L'*x where x is a vector
 function ldl_ltmul!(n, x::AbstractVector, Lp, Li, Lx)
-    @inbounds for j = 1:n
-        xj = x[j]
-        @inbounds for p = Lp[j] : (Lp[j+1] - 1)
-            xj += Lx[p] * x[Li[p]]
-        end
-        x[j] = xj
+  @inbounds for j = 1:n
+    xj = x[j]
+    @inbounds for p = Lp[j]:(Lp[j + 1] - 1)
+      xj += Lx[p] * x[Li[p]]
     end
-    return x
+    x[j] = xj
+  end
+  return x
 end
 
 function ldl_dmul!(n, x::AbstractVector, D)
-    @inbounds for j = 1:n
-        x[j] *= D[j]
-    end
-    return x
+  @inbounds for j = 1:n
+    x[j] *= D[j]
+  end
+  return x
 end
 
 function ldl_lmul!(n, x::AbstractVector, Lp, Li, Lx)
-    @inbounds for j = n:-1:1
-        xj = x[j]
-        @inbounds for p = Lp[j] : (Lp[j+1] - 1)
-            x[Li[p]] += Lx[p] * xj
-        end
+  @inbounds for j = n:-1:1
+    xj = x[j]
+    @inbounds for p = Lp[j]:(Lp[j + 1] - 1)
+      x[Li[p]] += Lx[p] * xj
     end
-    return x
+  end
+  return x
 end
 
 function ldl_mul!(n, x::AbstractVector, Lp, Li, Lx, D, P)
-    @views y = x[P]
-    ldl_ltmul!(n, y, Lp, Li, Lx)
-    ldl_dmul!(n, y, D)
-    ldl_lmul!(n, y, Lp, Li, Lx)
+  @views y = x[P]
+  ldl_ltmul!(n, y, Lp, Li, Lx)
+  ldl_dmul!(n, y, D)
+  ldl_lmul!(n, y, Lp, Li, Lx)
   return x
 end
 
 # compute L*D*L'*X where X is a matrix
 function ldl_ltmul!(n, X::AbstractMatrix, Lp, Li, Lx)
-    @inbounds for j = 1:n
-        @inbounds for p = Lp[j] : (Lp[j+1] - 1)
-            for k ∈ axes(X, 2)
-                X[j, k] += Lx[p] * X[Li[p], k]
-            end
-        end
+  @inbounds for j = 1:n
+    @inbounds for p = Lp[j]:(Lp[j + 1] - 1)
+      for k ∈ axes(X, 2)
+        X[j, k] += Lx[p] * X[Li[p], k]
+      end
     end
-    return X
+  end
+  return X
 end
 
 function ldl_dmul!(n, X::AbstractMatrix, D)
-    @inbounds for j = 1:n
-        @inbounds for k ∈ axes(X, 2)
-            X[j, k] *= D[j]
-        end
+  @inbounds for j = 1:n
+    @inbounds for k ∈ axes(X, 2)
+      X[j, k] *= D[j]
     end
-    return X
+  end
+  return X
 end
 
 function ldl_lmul!(n, X::AbstractMatrix, Lp, Li, Lx)
-    @inbounds for j = n:-1:1
-        @inbounds for p = Lp[j] : (Lp[j+1] - 1)
-            for k ∈ axes(X, 2)
-                X[Li[p], k] += Lx[p] * X[j, k]
-            end
-        end
+  @inbounds for j = n:-1:1
+    @inbounds for p = Lp[j]:(Lp[j + 1] - 1)
+      for k ∈ axes(X, 2)
+        X[Li[p], k] += Lx[p] * X[j, k]
+      end
     end
-    return X
+  end
+  return X
 end
 
 function ldl_mul!(n, X::AbstractMatrix, Lp, Li, Lx, D, P)
-    @views Y = X[P, :]
-    ldl_ltmul!(n, Y, Lp, Li, Lx)
-    ldl_dmul!(n, Y, D)
-    ldl_lmul!(n, Y, Lp, Li, Lx)
+  @views Y = X[P, :]
+  ldl_ltmul!(n, Y, Lp, Li, Lx)
+  ldl_dmul!(n, Y, D)
+  ldl_lmul!(n, Y, Lp, Li, Lx)
   return X
 end
 
 # a simplistic type for LDLᵀ factorizations so we can do \ and separate analyze/factorize
-mutable struct LDLFactorization{T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
+mutable struct LDLFactorization{T <: Real, Ti <: Integer, Tn <: Integer, Tp <: Integer}
   __analyzed::Bool
   __factorized::Bool
   __upper::Bool
@@ -433,10 +453,15 @@ mutable struct LDLFactorization{T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
   n_d::Tn
 end
 
-factorized(LDL::LDLFactorization{T,Ti,Tn,Tp}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer} = LDL.__factorized
+factorized(
+  LDL::LDLFactorization{T, Ti, Tn, Tp},
+) where {T <: Real, Ti <: Integer, Tn <: Integer, Tp <: Integer} = LDL.__factorized
 
 # perform symbolic analysis so it can be reused
-function ldl_analyze(A::Symmetric{T,SparseMatrixCSC{T,Ti}}, P::Vector{Tp}) where {T<:Real,Ti<:Integer,Tp<:Integer}
+function ldl_analyze(
+  A::Symmetric{T, SparseMatrixCSC{T, Ti}},
+  P::Vector{Tp},
+) where {T <: Real, Ti <: Integer, Tp <: Integer}
   A.uplo == 'U' || error("upper triangle must be supplied")
   n = size(A, 1)
   n == size(A, 2) || throw(DimensionMismatch("matrix must be square"))
@@ -447,7 +472,7 @@ function ldl_analyze(A::Symmetric{T,SparseMatrixCSC{T,Ti}}, P::Vector{Tp}) where
   Lnz = Vector{Ti}(undef, n)
   flag = Vector{Ti}(undef, n)
   pinv = Vector{Tp}(undef, n)
-  Lp = Vector{Ti}(undef, n+1)
+  Lp = Vector{Ti}(undef, n + 1)
 
   # Compute inverse permutation
   @inbounds for k = 1:n
@@ -468,54 +493,106 @@ function ldl_analyze(A::Symmetric{T,SparseMatrixCSC{T,Ti}}, P::Vector{Tp}) where
   d = Vector{T}(undef, n)
   Y = Vector{T}(undef, n)
   pattern = Vector{Ti}(undef, n)
-  return LDLFactorization(true, false, true, n, parent, Lnz, flag, P, pinv, Lp, Cp, Ci, Li, Lx, d, Y, pattern,
-                          zero(T), zero(T), zero(T), n)
+  return LDLFactorization(
+    true,
+    false,
+    true,
+    n,
+    parent,
+    Lnz,
+    flag,
+    P,
+    pinv,
+    Lp,
+    Cp,
+    Ci,
+    Li,
+    Lx,
+    d,
+    Y,
+    pattern,
+    zero(T),
+    zero(T),
+    zero(T),
+    n,
+  )
 end
 
 # convert dense to sparse
-ldl_analyze(A::Symmetric{T,Array{T,2}}) where T<:Real = ldl_analyze(Symmetric(sparse(A.data)))
-ldl_analyze(A::Symmetric{T,Array{T,2}}, P) where T<:Real = ldl_analyze(Symmetric(sparse(A.data)), P)
+ldl_analyze(A::Symmetric{T, Array{T, 2}}) where {T <: Real} = ldl_analyze(Symmetric(sparse(A.data)))
+ldl_analyze(A::Symmetric{T, Array{T, 2}}, P) where {T <: Real} =
+  ldl_analyze(Symmetric(sparse(A.data)), P)
 
 # use AMD permuation by default
-ldl_analyze(A::Symmetric{T,SparseMatrixCSC{T,Ti}}) where {T<:Real,Ti<:Integer} = ldl_analyze(A, amd(A))
+ldl_analyze(A::Symmetric{T, SparseMatrixCSC{T, Ti}}) where {T <: Real, Ti <: Integer} =
+  ldl_analyze(A, amd(A))
 
-function ldl_factorize!(A::Symmetric{T,SparseMatrixCSC{T,Ti}},
-                        S::LDLFactorization{T,Ti,Tn,Tp}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
+function ldl_factorize!(
+  A::Symmetric{T, SparseMatrixCSC{T, Ti}},
+  S::LDLFactorization{T, Ti, Tn, Tp},
+) where {T <: Real, Ti <: Integer, Tn <: Integer, Tp <: Integer}
   S.__analyzed || error("perform symbolic analysis prior to numerical factorization")
   n = size(A, 1)
   n == S.n || throw(DimensionMismatch("matrix size is inconsistent with symbolic analysis object"))
 
   # perform numerical factorization
-  S.__factorized = ldl_numeric_upper!(S.n, A.data.colptr, A.data.rowval, A.data.nzval,
-                                      S.Cp, S.Ci, S.Lp, S.parent, S.Lnz, S.Li, S.Lx, S.d, S.Y, S.pattern, S.flag, S.P, S.pinv,
-                                      S.r1, S.r2, S.tol, S.n_d)
+  S.__factorized = ldl_numeric_upper!(
+    S.n,
+    A.data.colptr,
+    A.data.rowval,
+    A.data.nzval,
+    S.Cp,
+    S.Ci,
+    S.Lp,
+    S.parent,
+    S.Lnz,
+    S.Li,
+    S.Lx,
+    S.d,
+    S.Y,
+    S.pattern,
+    S.flag,
+    S.P,
+    S.pinv,
+    S.r1,
+    S.r2,
+    S.tol,
+    S.n_d,
+  )
   return S
 end
 
 # convert dense to sparse
-ldl_factorize!(A::Symmetric{T,Array{T,2}}, S::LDLFactorization) where T<:Real = ldl_factorize!(Symmetric(sparse(A.data)), S)
+ldl_factorize!(A::Symmetric{T, Array{T, 2}}, S::LDLFactorization) where {T <: Real} =
+  ldl_factorize!(Symmetric(sparse(A.data)), S)
 
 # symmetric matrix input
-function ldl(sA::Symmetric{T,SparseMatrixCSC{T,Ti}}, P::Vector{Tp}) where {T<:Real,Ti<:Integer,Tp<:Integer}
+function ldl(
+  sA::Symmetric{T, SparseMatrixCSC{T, Ti}},
+  P::Vector{Tp},
+) where {T <: Real, Ti <: Integer, Tp <: Integer}
   sA.uplo == 'L' && error("matrix must contain the upper triangle")
   # ldl(sA.data, args...; upper = true )
   S = ldl_analyze(sA, P)
   ldl_factorize!(sA, S)
 end
 
-ldl(sA::Symmetric{T,Array{T,2}}) where T<:Real = ldl(Symmetric(sparse(sA.data)))
-ldl(sA::Symmetric{T,Array{T,2}}, P) where T<:Real = ldl(Symmetric(sparse(sA.data)), P)
-ldl(sA::Symmetric{T,SparseMatrixCSC{T,Ti}}) where {T<:Real,Ti<:Integer} = ldl(sA, amd(sA))
+ldl(sA::Symmetric{T, Array{T, 2}}) where {T <: Real} = ldl(Symmetric(sparse(sA.data)))
+ldl(sA::Symmetric{T, Array{T, 2}}, P) where {T <: Real} = ldl(Symmetric(sparse(sA.data)), P)
+ldl(sA::Symmetric{T, SparseMatrixCSC{T, Ti}}) where {T <: Real, Ti <: Integer} = ldl(sA, amd(sA))
 
 # convert dense to sparse
-ldl(A::Array{T,2}) where T<:Real = ldl(sparse(A))
-ldl(A::Array{T,2}, P) where T<:Real = ldl(sparse(A), P)
+ldl(A::Array{T, 2}) where {T <: Real} = ldl(sparse(A))
+ldl(A::Array{T, 2}, P) where {T <: Real} = ldl(sparse(A), P)
 
 # use AMD permutation by default
-ldl(A::SparseMatrixCSC{T,Ti}) where {T<:Real,Ti<:Integer} = ldl(A, amd(A))
+ldl(A::SparseMatrixCSC{T, Ti}) where {T <: Real, Ti <: Integer} = ldl(A, amd(A))
 
 # use ldl(A, collect(1:n)) to suppress permutation
-function ldl_analyze(A::SparseMatrixCSC{T,Ti}, P::Vector{Tp}) where {T<:Real,Ti<:Integer,Tp<:Integer}
+function ldl_analyze(
+  A::SparseMatrixCSC{T, Ti},
+  P::Vector{Tp},
+) where {T <: Real, Ti <: Integer, Tp <: Integer}
   n = size(A, 1)
   n == size(A, 2) || throw(DimensionMismatch("matrix must be square"))
   n == length(P) || throw(DimensionMismatch("permutation size mismatch"))
@@ -525,7 +602,7 @@ function ldl_analyze(A::SparseMatrixCSC{T,Ti}, P::Vector{Tp}) where {T<:Real,Ti<
   Lnz = Vector{Ti}(undef, n)
   flag = Vector{Ti}(undef, n)
   pinv = Vector{Tp}(undef, n)
-  Lp = Vector{Ti}(undef, n+1)
+  Lp = Vector{Ti}(undef, n + 1)
   Cp = Ti[]
   Ci = Ti[]
 
@@ -542,87 +619,161 @@ function ldl_analyze(A::SparseMatrixCSC{T,Ti}, P::Vector{Tp}) where {T<:Real,Ti<
   d = Vector{T}(undef, n)
   Y = Vector{T}(undef, n)
   pattern = Vector{Ti}(undef, n)
-  return LDLFactorization(true, false, false, n, parent, Lnz, flag, P, pinv, Lp, Cp, Ci, Li, Lx, d, Y, pattern,
-                          zero(T), zero(T), zero(T), n)
+  return LDLFactorization(
+    true,
+    false,
+    false,
+    n,
+    parent,
+    Lnz,
+    flag,
+    P,
+    pinv,
+    Lp,
+    Cp,
+    Ci,
+    Li,
+    Lx,
+    d,
+    Y,
+    pattern,
+    zero(T),
+    zero(T),
+    zero(T),
+    n,
+  )
 end
 
 # convert dense to sparse
-ldl_analyze(A::Array{T,2}) where T<:Real = ldl_analyze(sparse(A))
-ldl_analyze(A::Array{T,2}, P) where T<:Real = ldl_analyze(sparse(A), P)
+ldl_analyze(A::Array{T, 2}) where {T <: Real} = ldl_analyze(sparse(A))
+ldl_analyze(A::Array{T, 2}, P) where {T <: Real} = ldl_analyze(sparse(A), P)
 
 # use AMD permuation by default
-ldl_analyze(A::SparseMatrixCSC{T,Ti}) where {T<:Real,Ti<:Integer} = ldl_analyze(A, amd(A))
+ldl_analyze(A::SparseMatrixCSC{T, Ti}) where {T <: Real, Ti <: Integer} = ldl_analyze(A, amd(A))
 
-function ldl_factorize!(A::SparseMatrixCSC{T,Ti},
-                        S::LDLFactorization{T,Ti,Tn,Tp}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
+function ldl_factorize!(
+  A::SparseMatrixCSC{T, Ti},
+  S::LDLFactorization{T, Ti, Tn, Tp},
+) where {T <: Real, Ti <: Integer, Tn <: Integer, Tp <: Integer}
   S.__upper && error("symbolic analysis was performed for a Symmetric{} matrix")
   S.__analyzed || error("perform symbolic analysis prior to numerical factorization")
   n = size(A, 1)
   n == S.n || throw(DimensionMismatch("matrix size is inconsistent with symbolic analysis object"))
 
-  S.__factorized = ldl_numeric!(S.n, A.colptr, A.rowval, A.nzval, S.Lp, S.parent, S.Lnz,
-                                S.Li, S.Lx, S.d, S.Y, S.pattern, S.flag, S.P, S.pinv)
+  S.__factorized = ldl_numeric!(
+    S.n,
+    A.colptr,
+    A.rowval,
+    A.nzval,
+    S.Lp,
+    S.parent,
+    S.Lnz,
+    S.Li,
+    S.Lx,
+    S.d,
+    S.Y,
+    S.pattern,
+    S.flag,
+    S.P,
+    S.pinv,
+  )
   return S
 end
 
 # convert dense to sparse
-ldl_factorize!(A::Array{T,2}, S::LDLFactorization) where T<:Real = ldl_factorize!(sparse(A), S)
+ldl_factorize!(A::Array{T, 2}, S::LDLFactorization) where {T <: Real} = ldl_factorize!(sparse(A), S)
 
-function ldl(A::SparseMatrixCSC, P::Vector{Tp}) where Tp <: Integer
+function ldl(A::SparseMatrixCSC, P::Vector{Tp}) where {Tp <: Integer}
   S = ldl_analyze(A, P)
   ldl_factorize!(A, S)
 end
 
 import Base.(\)
-function (\)(LDL::LDLFactorization{T,Ti,Tn,Tp}, b::AbstractVector{T}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
+function (\)(
+  LDL::LDLFactorization{T, Ti, Tn, Tp},
+  b::AbstractVector{T},
+) where {T <: Real, Ti <: Integer, Tn <: Integer, Tp <: Integer}
   y = copy(b)
   LDL.__factorized || throw(SQDException(error_string))
   ldl_solve!(LDL.n, y, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
 end
 
-function (\)(LDL::LDLFactorization{T,Ti,Tn,Tp}, B::AbstractMatrix{T}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
+function (\)(
+  LDL::LDLFactorization{T, Ti, Tn, Tp},
+  B::AbstractMatrix{T},
+) where {T <: Real, Ti <: Integer, Tn <: Integer, Tp <: Integer}
   Y = copy(B)
   LDL.__factorized || throw(SQDException(error_string))
   ldl_solve!(LDL.n, Y, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
 end
 
 import LinearAlgebra.ldiv!
-@inline ldiv!(LDL::LDLFactorization{T,Ti,Tn,Tp}, b::AbstractVector{T}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer} =
-  LDL.__factorized ? ldl_solve!(LDL.n, b, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P) : throw(SQDException(error_string))
+@inline ldiv!(
+  LDL::LDLFactorization{T, Ti, Tn, Tp},
+  b::AbstractVector{T},
+) where {T <: Real, Ti <: Integer, Tn <: Integer, Tp <: Integer} =
+  LDL.__factorized ? ldl_solve!(LDL.n, b, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P) :
+  throw(SQDException(error_string))
 
-@inline ldiv!(LDL::LDLFactorization{T,Ti,Tn,Tp}, B::AbstractMatrix{T}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer} =
-  LDL.__factorized ? ldl_solve!(LDL.n, B, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P) : throw(SQDException(error_string))
+@inline ldiv!(
+  LDL::LDLFactorization{T, Ti, Tn, Tp},
+  B::AbstractMatrix{T},
+) where {T <: Real, Ti <: Integer, Tn <: Integer, Tp <: Integer} =
+  LDL.__factorized ? ldl_solve!(LDL.n, B, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P) :
+  throw(SQDException(error_string))
 
-function ldiv!(y::AbstractVector{T}, LDL::LDLFactorization{T,Ti,Tn,Tp}, b::AbstractVector{T}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
+function ldiv!(
+  y::AbstractVector{T},
+  LDL::LDLFactorization{T, Ti, Tn, Tp},
+  b::AbstractVector{T},
+) where {T <: Real, Ti <: Integer, Tn <: Integer, Tp <: Integer}
   y .= b
   LDL.__factorized || throw(SQDException(error_string))
   ldl_solve!(LDL.n, y, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
 end
 
-function ldiv!(Y::AbstractMatrix{T}, LDL::LDLFactorization{T,Ti}, B::AbstractMatrix{T}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
+function ldiv!(
+  Y::AbstractMatrix{T},
+  LDL::LDLFactorization{T, Ti},
+  B::AbstractMatrix{T},
+) where {T <: Real, Ti <: Integer, Tn <: Integer, Tp <: Integer}
   Y .= B
   LDL.__factorized || throw(SQDException(error_string))
   ldl_solve!(LDL.n, Y, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
 end
 
 import LinearAlgebra.lmul!, LinearAlgebra.mul!
-function lmul!(LDL::LDLFactorization{T,Ti,Tn,Tp}, x::AbstractVector{T}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
+function lmul!(
+  LDL::LDLFactorization{T, Ti, Tn, Tp},
+  x::AbstractVector{T},
+) where {T <: Real, Ti <: Integer, Tn <: Integer, Tp <: Integer}
   LDL.__factorized || throw(SQDException(error_string))
   ldl_mul!(LDL.n, x, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
 end
 
-function lmul!(LDL::LDLFactorization{T,Ti,Tn,Tp}, X::AbstractMatrix{T}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
+function lmul!(
+  LDL::LDLFactorization{T, Ti, Tn, Tp},
+  X::AbstractMatrix{T},
+) where {T <: Real, Ti <: Integer, Tn <: Integer, Tp <: Integer}
   LDL.__factorized || throw(SQDException(error_string))
   ldl_mul!(LDL.n, X, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
 end
 
-function mul!(y::AbstractVector{T}, LDL::LDLFactorization{T,Ti,Tn,Tp}, x::AbstractVector{T}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
+function mul!(
+  y::AbstractVector{T},
+  LDL::LDLFactorization{T, Ti, Tn, Tp},
+  x::AbstractVector{T},
+) where {T <: Real, Ti <: Integer, Tn <: Integer, Tp <: Integer}
   y .= x
   LDL.__factorized || throw(SQDException(error_string))
   ldl_mul!(LDL.n, y, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
 end
 
-function mul!(Y::AbstractMatrix{T}, LDL::LDLFactorization{T,Ti,Tn,Tp}, X::AbstractMatrix{T}) where {T<:Real,Ti<:Integer,Tn<:Integer,Tp<:Integer}
+function mul!(
+  Y::AbstractMatrix{T},
+  LDL::LDLFactorization{T, Ti, Tn, Tp},
+  X::AbstractMatrix{T},
+) where {T <: Real, Ti <: Integer, Tn <: Integer, Tp <: Integer}
   Y .= X
   LDL.__factorized || throw(SQDException(error_string))
   ldl_mul!(LDL.n, Y, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)

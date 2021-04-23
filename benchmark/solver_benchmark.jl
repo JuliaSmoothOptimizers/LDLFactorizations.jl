@@ -9,9 +9,9 @@ pyplot()
 using PlotThemes
 theme(:wong)
 
-common_plot_args = Dict{Symbol,Any}(
+common_plot_args = Dict{Symbol, Any}(
   :linewidth => 2,
-  :alpha => .75,
+  :alpha => 0.75,
   :titlefontsize => 8,
   :legendfontsize => 8,
   :xtickfontsize => 6,
@@ -21,7 +21,7 @@ common_plot_args = Dict{Symbol,Any}(
 Plots.default(; common_plot_args...)
 
 # perform benchmarks
-results = PkgBenchmark.benchmarkpkg("LDLFactorizations", script="benchmark/sqd_bmark.jl")
+results = PkgBenchmark.benchmarkpkg("LDLFactorizations", script = "benchmark/sqd_bmark.jl")
 stats = bmark_results_to_dataframes(results)
 save_stats(stats, "ldl_vs_qdldl.jld2")
 
