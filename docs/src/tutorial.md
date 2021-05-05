@@ -25,9 +25,12 @@ We build a problem with sparse arrays.
 ```julia
 using SparseArrays
 n = 100
+# create create a SQD matrix A:
 A0 = sprand(Float64, n, n, 0.1)
-A = A0 * A0' + I # A is symmetric positive definite
-b = rand(n)
+A1 = A0 * A0' + I
+A = [A1 A0;
+    A0' -A1]
+b = rand(2 * n)
 ```
 
 Now if we want to use the factorization to solve multiple systems that have 
@@ -50,7 +53,7 @@ ldiv!(x, LDL, b)
 
 When the matrix to factorize is nearly singular and the factorization encounters zero pivots, 
 if we know the signs of the pivots and if they are clustered by signs (for example, the 
-`n_d` first pivots are positive and the other pivots are negative), we can use:
+`n_d` first pivots are positive and the other pivots are negative before permuting), we can use:
 
 ```julia
 ϵ = sqrt(eps())
@@ -58,7 +61,7 @@ Au = Symmetric(triu(A), :U)
 LDL = ldl_analyze(Au)
 LDL.tol = ϵ
 LDL.n_d = 10
-LDL.r1 = ϵ # if any of the n_d first pivots D[i] < ϵ, then D[i] += LDL.r1    
+LDL.r1 = 2 * ϵ # if any of the n_d first pivots D[i] < ϵ, then D[i] += LDL.r1    
 LDL.r2 = -ϵ # if any of the n - n_d last pivots D[i] < ϵ, then D[i] += LDL.r2 
 ldl_factorize!(Au, LDL)
 ```
