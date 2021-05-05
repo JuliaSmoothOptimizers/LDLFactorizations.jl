@@ -22,7 +22,6 @@ row index and j the column index. Those elements are the nonzeros of the lower t
 - `w::Vector{Ti}`: work array
 - `Pinv::Vector{Ti}`: inverse permutation of P. PAPt is the matrix to factorize (CSC format)
 """
-
 function col_symb!(n, Ap, Ai, Cp, w, Pinv)
   fill!(w, 0)
   @inbounds for j = 1:n
@@ -54,7 +53,6 @@ row index and j the column index. Those elements are the nonzeros of the lower t
 - `w::Vector{Ti}`: work array
 - `Pinv::Vector{Ti}`: inverse permutation of P. PAPt is the matrix to factorize (CSC format)
 """
-
 function col_num!(n, Ap, Ai, Ci, w, Pinv)
   @inbounds for j = 1:n
     @inbounds for p = Ap[j]:(Ap[j + 1] - 1)
@@ -427,7 +425,6 @@ function ldl_mul!(n, X::AbstractMatrix, Lp, Li, Lx, D, P)
   return X
 end
 
-# a simplistic type for LDLᵀ factorizations so we can do \ and separate analyze/factorize
 """
 Type that contains the LDLᵀ factorization of a matrix.
 
@@ -470,7 +467,7 @@ end
 """
     isfact = factorized(LDL)
 
-Returns true if the lattest factorization of the `LDL` [`LDLFactorization`](@ref) succeeded.
+Returns true if the most recent factorization stored in `LDL` [`LDLFactorization`](@ref) succeeded.
 """
 factorized(
   LDL::LDLFactorization{T, Ti, Tn, Tp},
@@ -481,7 +478,8 @@ factorized(
     LDL = ldl_analyze(A, P)
     LDL = ldl_analyze(A)
 
-Perform symbolic analysis of the matrix A so it can be reused. 
+Perform symbolic analysis of the matrix A with permutation vector P (uses an 
+AMD permutation by default) so it can be reused. 
 A should be a upper triangular matrix wrapped with LinearAlgebra's Symmetric type.
 """
 function ldl_analyze(
@@ -602,7 +600,7 @@ ldl_factorize!(A::Symmetric{T, Array{T, 2}}, S::LDLFactorization) where {T <: Re
     S = ldl(A, P)
     S = ldl(A)
 
-Computes the LDLᵀ factorization of the matrix A with permutation vector P (uses an 
+Compute the LDLᵀ factorization of the matrix A with permutation vector P (uses an 
 AMD permutation by default).
 This function is equivalent to:
 
