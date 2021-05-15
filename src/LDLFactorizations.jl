@@ -764,7 +764,7 @@ import LinearAlgebra.ldiv!
 """
     ldiv!(LDL, b) 
 
-If LDL is the LDLᵀ factorization of A, solves `A y = b` and overwrites b with y.
+If LDL is the LDLᵀ factorization of A, solves `A x = b` and overwrites b with x.
 """
 @inline ldiv!(
   LDL::LDLFactorization{T, Ti, Tn, Tp},
@@ -783,7 +783,7 @@ If LDL is the LDLᵀ factorization of A, solves `A y = b` and overwrites b with 
 """
     ldiv!(y, LDL, b) 
 
-If LDL is the LDLᵀ factorization of A, solves in-place `A y = b`.
+If LDL is the LDLᵀ factorization of A, solves `A x = b` In place.
 """
 function ldiv!(
   y::AbstractVector{T},

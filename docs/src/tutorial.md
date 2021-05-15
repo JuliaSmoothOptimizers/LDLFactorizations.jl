@@ -4,7 +4,7 @@
 
 ```julia
 n = 10
-A0 = rand(n,n)
+A0 = rand(n, n)
 A = A0 * A0' + I # A is symmetric positive definite
 b = rand(n)
 ```
@@ -28,8 +28,8 @@ n = 100
 # create create a SQD matrix A:
 A0 = sprand(Float64, n, n, 0.1)
 A1 = A0 * A0' + I
-A = [A1 A0;
-    A0' -A1]
+A = [A1   A0;
+     A0' -A1]
 b = rand(2 * n)
 ```
 
@@ -51,7 +51,7 @@ ldiv!(x, LDL, b)
 
 ## Dynamic Regularization
 
-When the matrix to factorize is nearly singular and the factorization encounters zero pivots, 
+When the matrix to factorize is (nearly) singular and the factorization encounters (nearly) zero pivots, 
 if we know the signs of the pivots and if they are clustered by signs (for example, the 
 `n_d` first pivots are positive and the other pivots are negative before permuting), we can use:
 
