@@ -432,7 +432,7 @@ The components of the factorization can be accessed via `getproperty`:
 
 - `LDL.L`: `L` sparse lower triangular factor of the factorization without the diagonal 
     of ones that is removed to save space
-- `LDL.D` : `D` diagonal matrix of the factorization.
+- `LDL.D`: `D` diagonal matrix of the factorization.
 
 In order to avoid zero pivots during the factorization, the user can regularize the matrix by modifying 
 `LDL.r1` for the `LDL.n_d` first pivots and `LDL.r2` for the other pivots with tolerance `LDL.tol`.
