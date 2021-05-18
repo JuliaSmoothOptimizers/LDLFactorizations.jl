@@ -473,7 +473,6 @@ factorized(
   LDL::LDLFactorization{T, Ti, Tn, Tp},
 ) where {T <: Real, Ti <: Integer, Tn <: Integer, Tp <: Integer} = LDL.__factorized
 
-
 """
     LDL = ldl_analyze(A, P)
     LDL = ldl_analyze(A)
