@@ -9,7 +9,7 @@ Please cite this repository if you use LDLFactorizations.jl in your work: see [`
 [![Build Status](https://api.cirrus-ci.com/github/JuliaSmoothOptimizers/LDLFactorizations.jl.svg)](https://cirrus-ci.com/github/JuliaSmoothOptimizers/LDLFactorizations.jl)
 [![codecov](https://codecov.io/gh/JuliaSmoothOptimizers/LDLFactorizations.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/JuliaSmoothOptimizers/LDLFactorizations.jl)
 [![Documentation/stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://JuliaSmoothOptimizers.github.io/LDLFactorizations.jl/stable)
-[![Documentation/dev](https://img.shields.io/badge/docs-latest-blue.svg)](https://JuliaSmoothOptimizers.github.io/LDLFactorizations.jl/latest)
+[![Documentation/dev](https://img.shields.io/badge/docs-latest-blue.svg)](https://JuliaSmoothOptimizers.github.io/LDLFactorizations.jl/dev)
 
 This package is appropriate for matrices A that possess a factorization of the
 form LDLᵀ without pivoting, where L is unit lower triangular and D is *diagonal* (indefinite in general), including definite and quasi-definite matrices.
