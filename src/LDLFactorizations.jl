@@ -425,7 +425,18 @@ function ldl_mul!(n, X::AbstractMatrix, Lp, Li, Lx, D, P)
   return X
 end
 
-# a simplistic type for LDLᵀ factorizations so we can do \ and separate analyze/factorize
+"""
+Type that contains the LDLᵀ factorization of a matrix.
+
+The components of the factorization can be accessed via `getproperty`:
+
+- `LDL.L`: `L` sparse lower triangular factor of the factorization without the diagonal 
+    of ones that is removed to save space
+- `LDL.D`: `D` diagonal matrix of the factorization.
+
+In order to avoid zero pivots during the factorization, the user can regularize the matrix by modifying 
+`LDL.r1` for the `LDL.n_d` first pivots and `LDL.r2` for the other pivots with tolerance `LDL.tol`.
+"""
 mutable struct LDLFactorization{T <: Real, Ti <: Integer, Tn <: Integer, Tp <: Integer}
   __analyzed::Bool
   __factorized::Bool
@@ -453,11 +464,24 @@ mutable struct LDLFactorization{T <: Real, Ti <: Integer, Tn <: Integer, Tp <: I
   n_d::Tn
 end
 
+"""
+    isfact = factorized(LDL)
+
+Returns true if the most recent factorization stored in `LDL` [`LDLFactorization`](@ref) succeeded.
+"""
 factorized(
   LDL::LDLFactorization{T, Ti, Tn, Tp},
 ) where {T <: Real, Ti <: Integer, Tn <: Integer, Tp <: Integer} = LDL.__factorized
 
-# perform symbolic analysis so it can be reused
+
+"""
+    LDL = ldl_analyze(A, P)
+    LDL = ldl_analyze(A)
+
+Perform symbolic analysis of the matrix A with permutation vector P (uses an 
+AMD permutation by default) so it can be reused. 
+A should be a upper triangular matrix wrapped with LinearAlgebra's Symmetric type.
+"""
 function ldl_analyze(
   A::Symmetric{T, SparseMatrixCSC{T, Ti}},
   P::Vector{Tp},
@@ -527,6 +551,11 @@ ldl_analyze(A::Symmetric{T, Array{T, 2}}, P) where {T <: Real} =
 ldl_analyze(A::Symmetric{T, SparseMatrixCSC{T, Ti}}) where {T <: Real, Ti <: Integer} =
   ldl_analyze(A, amd(A))
 
+"""
+    ldl_factorize!(A, S)
+
+Factorize A into the S [`LDLFactorization`](@ref) struct.
+"""
 function ldl_factorize!(
   A::Symmetric{T, SparseMatrixCSC{T, Ti}},
   S::LDLFactorization{T, Ti, Tn, Tp},
@@ -567,6 +596,23 @@ ldl_factorize!(A::Symmetric{T, Array{T, 2}}, S::LDLFactorization) where {T <: Re
   ldl_factorize!(Symmetric(sparse(A.data)), S)
 
 # symmetric matrix input
+"""
+    S = ldl(A, P)
+    S = ldl(A)
+
+Compute the LDLᵀ factorization of the matrix A with permutation vector P (uses an 
+AMD permutation by default).
+This function is equivalent to:
+
+    S = ldl_analyze(A)
+    ldl_factorize!(A, S)
+
+A should either be a upper triangular matrix wrapped with LinearAlgebra's Symmetric 
+type, or a symmetric matrix (not wrapped with Symmetric).
+
+Using a non upper triangular matrix wrapped with Symmetric will not give the LDLᵀ factorisation
+of A.
+"""
 function ldl(
   sA::Symmetric{T, SparseMatrixCSC{T, Ti}},
   P::Vector{Tp},
@@ -689,6 +735,12 @@ function ldl(A::SparseMatrixCSC, P::Vector{Tp}) where {Tp <: Integer}
 end
 
 import Base.(\)
+
+"""
+    x = LDL \\ b 
+
+If LDL is the LDLᵀ factorization of A, solves ``A x = b``.
+"""
 function (\)(
   LDL::LDLFactorization{T, Ti, Tn, Tp},
   b::AbstractVector{T},
@@ -708,6 +760,12 @@ function (\)(
 end
 
 import LinearAlgebra.ldiv!
+
+"""
+    ldiv!(LDL, b) 
+
+If LDL is the LDLᵀ factorization of A, solves `A x = b` and overwrites b with x.
+"""
 @inline ldiv!(
   LDL::LDLFactorization{T, Ti, Tn, Tp},
   b::AbstractVector{T},
@@ -722,6 +780,11 @@ import LinearAlgebra.ldiv!
   LDL.__factorized ? ldl_solve!(LDL.n, B, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P) :
   throw(SQDException(error_string))
 
+"""
+    ldiv!(y, LDL, b) 
+
+If LDL is the LDLᵀ factorization of A, solves `A x = b` In place.
+"""
 function ldiv!(
   y::AbstractVector{T},
   LDL::LDLFactorization{T, Ti, Tn, Tp},
