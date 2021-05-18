@@ -9,7 +9,7 @@ A = A0 * A0' + I # A is symmetric positive definite
 b = rand(n)
 ```
 
-We solve the system `A x = b` using LDLFactorizations.jl :
+We solve the system `A x = b` using LDLFactorizations.jl:
 
 ```julia 
 using LDLFactorizations, LinearAlgebra
