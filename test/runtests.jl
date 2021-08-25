@@ -389,20 +389,24 @@ end
 
   LDL32 = ldl_analyze(A, Tf = Float32)
   @test typeof(LDL32) == LDLFactorizations.LDLFactorization{Float32, Int, Int, Int}
+  @test eltype(LDL32) == Float32
   ldl_factorize!(A, LDL32)
   @test LDL32.__factorized
 
   LDL32 = ldl_analyze(Symmetric(triu(A), :U), Tf = Float32)
   @test typeof(LDL32) == LDLFactorizations.LDLFactorization{Float32, Int, Int, Int}
+  @test eltype(LDL32) == Float32
   ldl_factorize!(Symmetric(triu(A), :U), LDL32)
   @test LDL32.__factorized
 
   LDL32 = ldl(A, Tf = Float32)
   @test typeof(LDL32) == LDLFactorizations.LDLFactorization{Float32, Int, Int, Int}
+  @test eltype(LDL32) == Float32
   @test LDL32.__factorized
 
   LDL32 = ldl(Symmetric(triu(A), :U), Tf = Float32)
   @test typeof(LDL32) == LDLFactorizations.LDLFactorization{Float32, Int, Int, Int}
+  @test eltype(LDL32) == Float32
   @test LDL32.__factorized
 
   b, c = rand(n), rand(n)
