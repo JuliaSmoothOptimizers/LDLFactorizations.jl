@@ -480,7 +480,7 @@ factorized(
 
 Perform symbolic analysis of the matrix A with permutation vector P (uses an 
 AMD permutation by default) so it can be reused. 
-Tf should be the type of the factorization, and defaults to `eltype(A)`.
+Tf should be the element type of the factors, and defaults to `eltype(A)`.
 A should be a upper triangular matrix wrapped with LinearAlgebra's Symmetric type.
 """
 function ldl_analyze(
@@ -605,7 +605,7 @@ ldl_factorize!(A::Symmetric{T, Array{T, 2}}, S::LDLFactorization) where {T <: Re
 
 Compute the LDLᵀ factorization of the matrix A with permutation vector P (uses an 
 AMD permutation by default).
-Tf should be the type of the factorization, and defaults to `eltype(A)`.
+Tf should be the element type of the factors, and defaults to `eltype(A)`.
 This function is equivalent to:
 
     S = ldl_analyze(A)

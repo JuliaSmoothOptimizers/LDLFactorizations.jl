@@ -388,26 +388,26 @@ end
   m, n = size(A)
 
   LDL32 = ldl_analyze(A, Tf = Float32)
-  @test typeof(LDL32) == LDLFactorizations.LDLFactorization{Float32, Int64, Int64, Int64}
+  @test typeof(LDL32) == LDLFactorizations.LDLFactorization{Float32, Int, Int, Int}
   ldl_factorize!(A, LDL32)
   @test LDL32.__factorized
 
   LDL32 = ldl_analyze(Symmetric(triu(A), :U), Tf = Float32)
-  @test typeof(LDL32) == LDLFactorizations.LDLFactorization{Float32, Int64, Int64, Int64}
+  @test typeof(LDL32) == LDLFactorizations.LDLFactorization{Float32, Int, Int, Int}
   ldl_factorize!(Symmetric(triu(A), :U), LDL32)
   @test LDL32.__factorized
 
   LDL32 = ldl(A, Tf = Float32)
-  @test typeof(LDL32) == LDLFactorizations.LDLFactorization{Float32, Int64, Int64, Int64}
+  @test typeof(LDL32) == LDLFactorizations.LDLFactorization{Float32, Int, Int, Int}
   @test LDL32.__factorized
 
   LDL32 = ldl(Symmetric(triu(A), :U), Tf = Float32)
-  @test typeof(LDL32) == LDLFactorizations.LDLFactorization{Float32, Int64, Int64, Int64}
+  @test typeof(LDL32) == LDLFactorizations.LDLFactorization{Float32, Int, Int, Int}
   @test LDL32.__factorized
 
   b, c = rand(n), rand(n)
   d = LDL32 \ b
-  @test eltype(c) == Float64 
+  @test eltype(d) == Float64 
   ldiv!(c, LDL32, b)
   ldiv!(LDL32, b)
   @test eltype(b) == Float64 
