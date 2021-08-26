@@ -411,10 +411,10 @@ end
 
   b, c = rand(n), rand(n)
   d = LDL32 \ b
-  @test eltype(d) == Float64 
+  @test eltype(d) == Float64
   ldiv!(c, LDL32, b)
   ldiv!(LDL32, b)
-  @test eltype(b) == Float64 
+  @test eltype(b) == Float64
   @test all(b .== d .== c)
 
   mul!(c, LDL32, b)
