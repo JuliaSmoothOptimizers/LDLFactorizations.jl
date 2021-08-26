@@ -369,3 +369,56 @@ end
   r2 .-= b
   @test norm(r2) ≤ sqrt(ϵ) * norm(b)
 end
+
+@testset "factorization precision" begin
+  A = [
+    1.7 0 0 0 0 0 0 0 0.13 0
+    0 1.0 0 0 0.02 0 0 0 0 0.01
+    0 0 1.5 0 0 0 0 0 0 0
+    0 0 0 1.1 0 0 0 0 0 0
+    0 0.02 0 0 2.6 0 0.16 0.09 0.52 0.53
+    0 0 0 0 0 1.2 0 0 0 0
+    0 0 0 0 0.16 0 1.3 0 0 0.56
+    0 0 0 0 0.09 0 0 1.6 0.11 0
+    0.13 0 0 0 0.52 0 0 0.11 1.4 0
+    0 0.01 0 0 0.53 0 0.56 0 0 3.1
+  ]
+  b = [0.287, 0.22, 0.45, 0.44, 2.486, 0.72, 1.55, 1.424, 1.621, 3.759]
+  ϵ = sqrt(eps(eltype(A)))
+  m, n = size(A)
+
+  LDL32 = ldl_analyze(A, Tf = Float32)
+  @test typeof(LDL32) == LDLFactorizations.LDLFactorization{Float32, Int, Int, Int}
+  @test eltype(LDL32) == Float32
+  ldl_factorize!(A, LDL32)
+  @test LDL32.__factorized
+
+  LDL32 = ldl_analyze(Symmetric(triu(A), :U), Tf = Float32)
+  @test typeof(LDL32) == LDLFactorizations.LDLFactorization{Float32, Int, Int, Int}
+  @test eltype(LDL32) == Float32
+  ldl_factorize!(Symmetric(triu(A), :U), LDL32)
+  @test LDL32.__factorized
+
+  LDL32 = ldl(A, Tf = Float32)
+  @test typeof(LDL32) == LDLFactorizations.LDLFactorization{Float32, Int, Int, Int}
+  @test eltype(LDL32) == Float32
+  @test LDL32.__factorized
+
+  LDL32 = ldl(Symmetric(triu(A), :U), Tf = Float32)
+  @test typeof(LDL32) == LDLFactorizations.LDLFactorization{Float32, Int, Int, Int}
+  @test eltype(LDL32) == Float32
+  @test LDL32.__factorized
+
+  b, c = rand(n), rand(n)
+  d = LDL32 \ b
+  @test eltype(d) == Float64 
+  ldiv!(c, LDL32, b)
+  ldiv!(LDL32, b)
+  @test eltype(b) == Float64 
+  @test all(b .== d .== c)
+
+  mul!(c, LDL32, b)
+  lmul!(LDL32, b)
+  @test eltype(c) == eltype(b) == Float64
+  @test all(b .== c)
+end
