@@ -1,5 +1,7 @@
 # LDLFactorizations: Factorization of Symmetric Matrices
 
+DO NOT MERGE
+
 A translation of Tim Davis's Concise LDLᵀ Factorization, part of [SuiteSparse](http://faculty.cse.tamu.edu/davis/suitesparse.html) with several improvements.
 
 Please cite this repository if you use LDLFactorizations.jl in your work: see [`CITATION.bib`](https://github.com/JuliaSmoothOptimizers/LDLFactorizations.jl/blob/main/CITATION.bib).
