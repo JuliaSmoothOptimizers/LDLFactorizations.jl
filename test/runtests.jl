@@ -430,6 +430,6 @@ end
   S = ldl_analyze(A)
   ldl_factorize!(A, S)
   x1 = S \ (-b)
-  x2 = - S \ b
+  x2 = -S \ b
   @test x1 == x2
 end
