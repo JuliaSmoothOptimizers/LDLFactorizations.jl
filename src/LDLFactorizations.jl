@@ -885,7 +885,7 @@ Unary minus operator returns an `LDLFactorization` with `-LDL.d`.
 function (-)(
   LDL::LDLFactorization{Tf, Ti, Tn, Tp},
 ) where {Tf <: Real, Ti <: Integer, Tn <: Integer, Tp <: Integer}
-  LDL.d .= - LDL.d
+  LDL.d .= -LDL.d
   return LDL
 end
 
