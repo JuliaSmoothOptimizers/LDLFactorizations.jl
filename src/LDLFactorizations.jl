@@ -1,6 +1,6 @@
 module LDLFactorizations
 
-export ldl, ldl_analyze, ldl_factorize!, factorized, \, ldiv!, lmul!, mul!, nnz
+export ldl, ldl_analyze, ldl_factorize!, factorized, \, ldiv!, lmul!, mul!, nnz, -
 
 using AMD, LinearAlgebra, SparseArrays
 
@@ -874,5 +874,19 @@ SparseArrays.nnz(LDL::LDLFactorization) = length(LDL.Lx) + length(LDL.d)
 end
 
 Base.propertynames(LDL::LDLFactorization) = (:L, :D, :P)
+
+import Base.(-)
+
+"""
+    -(LDL)
+
+Unary minus operator returns an `LDLFactorization` with `-LDL.d`.
+"""
+function (-)(
+  LDL::LDLFactorization{Tf, Ti, Tn, Tp},
+) where {Tf <: Real, Ti <: Integer, Tn <: Integer, Tp <: Integer}
+  LDL.d .= - LDL.d
+  return LDL
+end
 
 end  # module
