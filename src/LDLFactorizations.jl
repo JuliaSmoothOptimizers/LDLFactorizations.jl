@@ -142,7 +142,7 @@ function ldl_numeric_upper!(
   Li,
   Lx,
   D,
-  Y,
+  Y::T,
   pattern,
   flag,
   P,
@@ -151,10 +151,11 @@ function ldl_numeric_upper!(
   r2,
   tol,
   n_d,
-)
+) where {T}
   dynamic_reg = r1 != 0 || r2 != 0
+  Y_zero = zero(eltype(T))
   @inbounds for k = 1:n
-    Y[k] = 0
+    Y[k] = Y_zero
     top = n + 1
     flag[k] = k
     Lnz[k] = 0
@@ -200,11 +201,11 @@ function ldl_numeric_upper!(
       end
     end
     D[k] = Y[k]
-    Y[k] = 0
+    Y[k] = Y_zero
     @inbounds while top ≤ n
       i = pattern[top]
       yi = Y[i]
-      Y[i] = 0
+      Y[i] = Y_zero
       @inbounds for p = Lp[i]:(Lp[i] + Lnz[i] - 1)
         Y[Li[p]] -= Lx[p] * yi
       end
