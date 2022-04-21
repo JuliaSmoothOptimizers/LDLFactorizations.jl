@@ -546,9 +546,9 @@ function ldl_analyze(
 end
 
 # convert dense to sparse
-ldl_analyze(A::Symmetric{T, Array{T, 2}}; Tf = eltype(A)) where {T <: Real} =
+ldl_analyze(A::Symmetric{T, Matrix{T}}; Tf = eltype(A)) where {T <: Real} =
   ldl_analyze(Symmetric(sparse(A.data)), Tf = Tf)
-ldl_analyze(A::Symmetric{T, Array{T, 2}}, P; Tf = eltype(A)) where {T <: Real} =
+ldl_analyze(A::Symmetric{T, Matrix{T}}, P; Tf = eltype(A)) where {T <: Real} =
   ldl_analyze(Symmetric(sparse(A.data)), P, Tf = Tf)
 
 # use AMD permuation by default
@@ -598,7 +598,7 @@ function ldl_factorize!(
 end
 
 # convert dense to sparse
-ldl_factorize!(A::Symmetric{T, Array{T, 2}}, S::LDLFactorization) where {T <: Real} =
+ldl_factorize!(A::Symmetric{T, Matrix{T}}, S::LDLFactorization) where {T <: Real} =
   ldl_factorize!(Symmetric(sparse(A.data)), S)
 
 # symmetric matrix input
@@ -632,16 +632,16 @@ function ldl(
   ldl_factorize!(sA, S)
 end
 
-ldl(sA::Symmetric{T, Array{T, 2}}; Tf = eltype(sA)) where {T <: Real} =
+ldl(sA::Symmetric{T, Matrix{T}}; Tf = eltype(sA)) where {T <: Real} =
   ldl(Symmetric(sparse(sA.data)), Tf = Tf)
-ldl(sA::Symmetric{T, Array{T, 2}}, P; Tf = eltype(sA)) where {T <: Real} =
+ldl(sA::Symmetric{T, Matrix{T}}, P; Tf = eltype(sA)) where {T <: Real} =
   ldl(Symmetric(sparse(sA.data)), P, Tf = Tf)
 ldl(sA::Symmetric{T, SparseMatrixCSC{T, Ti}}; Tf = eltype(sA)) where {T <: Real, Ti <: Integer} =
   ldl(sA, amd(sA), Tf = Tf)
 
 # convert dense to sparse
-ldl(A::Array{T, 2}; Tf = eltype(A)) where {T <: Real} = ldl(sparse(A), Tf = Tf)
-ldl(A::Array{T, 2}, P; Tf = eltype(A)) where {T <: Real} = ldl(sparse(A), P, Tf = Tf)
+ldl(A::Matrix{T}; Tf = eltype(A)) where {T <: Real} = ldl(sparse(A), Tf = Tf)
+ldl(A::Matrix{T}, P; Tf = eltype(A)) where {T <: Real} = ldl(sparse(A), P, Tf = Tf)
 
 # use AMD permutation by default
 ldl(A::SparseMatrixCSC{T, Ti}; Tf = eltype(A)) where {T <: Real, Ti <: Integer} =
@@ -705,8 +705,8 @@ function ldl_analyze(
 end
 
 # convert dense to sparse
-ldl_analyze(A::Array{T, 2}; Tf = eltype(A)) where {T <: Real} = ldl_analyze(sparse(A), Tf = Tf)
-ldl_analyze(A::Array{T, 2}, P; Tf = eltype(A)) where {T <: Real} =
+ldl_analyze(A::Matrix{T}; Tf = eltype(A)) where {T <: Real} = ldl_analyze(sparse(A), Tf = Tf)
+ldl_analyze(A::Matrix{T}, P; Tf = eltype(A)) where {T <: Real} =
   ldl_analyze(sparse(A), P, Tf = Tf)
 
 # use AMD permuation by default
@@ -743,7 +743,7 @@ function ldl_factorize!(
 end
 
 # convert dense to sparse
-ldl_factorize!(A::Array{T, 2}, S::LDLFactorization) where {T <: Real} = ldl_factorize!(sparse(A), S)
+ldl_factorize!(A::Matrix{T}, S::LDLFactorization) where {T <: Real} = ldl_factorize!(sparse(A), S)
 
 function ldl(A::SparseMatrixCSC, P::Vector{Tp}; Tf = eltype(A)) where {Tp <: Integer}
   S = ldl_analyze(A, P, Tf = Tf)
