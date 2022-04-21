@@ -184,7 +184,7 @@ function ldl_numeric_upper!(
       i > k && continue
       @inbounds for p = Ap[i2]:(Ap[i2 + 1] - 1)
         Ai[p] < pk && continue
-        Y[i] += Ax[p]
+        Y[i] += conj(Ax[p])
         len = 1
         @inbounds while flag[i] != k
           pattern[len] = i
@@ -211,9 +211,9 @@ function ldl_numeric_upper!(
       end
       p = Lp[i] + Lnz[i]
       l_ki = yi / D[i]
-      D[k] -= l_ki * yi
+      D[k] -= conj(l_ki) * yi
       Li[p] = k
-      Lx[p] = l_ki
+      Lx[p] = conj(l_ki)
       Lnz[i] += 1
       top += 1
     end
@@ -261,9 +261,9 @@ function ldl_numeric!(n, Ap, Ai, Ax, Lp, parent, Lnz, Li, Lx, D, Y, pattern, fla
       end
       p = Lp[i] + Lnz[i]
       l_ki = yi / D[i]
-      D[k] -= l_ki * yi
+      D[k] -= conj(l_ki) * yi
       Li[p] = k
-      Lx[p] = l_ki
+      Lx[p] = conj(l_ki)
       Lnz[i] += 1
       top += 1
     end
@@ -294,7 +294,7 @@ function ldl_ltsolve!(n, x::AbstractVector, Lp, Li, Lx)
   @inbounds for j = n:-1:1
     xj = x[j]
     @inbounds for p = Lp[j]:(Lp[j + 1] - 1)
-      xj -= Lx[p] * x[Li[p]]
+      xj -= conj(Lx[p]) * x[Li[p]]
     end
     x[j] = xj
   end
@@ -310,7 +310,7 @@ function ldl_solve!(n, b::AbstractVector, Lp, Li, Lx, D, P)
 end
 
 # solve functions for multiple rhs
-function ldl_lsolve!(n, X::AbstractMatrix{T}, Lp, Li, Lx) where {T}
+function ldl_lsolve!(n, X::AbstractMatrix, Lp, Li, Lx)
   @inbounds for j = 1:n
     @inbounds for p = Lp[j]:(Lp[j + 1] - 1)
       for k ∈ axes(X, 2)
@@ -321,7 +321,7 @@ function ldl_lsolve!(n, X::AbstractMatrix{T}, Lp, Li, Lx) where {T}
   return X
 end
 
-function ldl_dsolve!(n, X::AbstractMatrix{T}, D) where {T}
+function ldl_dsolve!(n, X::AbstractMatrix, D)
   @inbounds for j = 1:n
     for k ∈ axes(X, 2)
       X[j, k] /= D[j]
@@ -330,18 +330,18 @@ function ldl_dsolve!(n, X::AbstractMatrix{T}, D) where {T}
   return X
 end
 
-function ldl_ltsolve!(n, X::AbstractMatrix{T}, Lp, Li, Lx) where {T}
+function ldl_ltsolve!(n, X::AbstractMatrix, Lp, Li, Lx)
   @inbounds for j = n:-1:1
     @inbounds for p = Lp[j]:(Lp[j + 1] - 1)
       for k ∈ axes(X, 2)
-        X[j, k] -= Lx[p] * X[Li[p], k]
+        X[j, k] -= conj(Lx[p]) * X[Li[p], k]
       end
     end
   end
   return X
 end
 
-function ldl_solve!(n, B::AbstractMatrix{T}, Lp, Li, Lx, D, P) where {T}
+function ldl_solve!(n, B::AbstractMatrix, Lp, Li, Lx, D, P)
   @views Y = B[P, :]
   ldl_lsolve!(n, Y, Lp, Li, Lx)
   ldl_dsolve!(n, Y, D)
@@ -354,7 +354,7 @@ function ldl_ltmul!(n, x::AbstractVector, Lp, Li, Lx)
   @inbounds for j = 1:n
     xj = x[j]
     @inbounds for p = Lp[j]:(Lp[j + 1] - 1)
-      xj += Lx[p] * x[Li[p]]
+      xj += conj(Lx[p]) * x[Li[p]]
     end
     x[j] = xj
   end
@@ -391,7 +391,7 @@ function ldl_ltmul!(n, X::AbstractMatrix, Lp, Li, Lx)
   @inbounds for j = 1:n
     @inbounds for p = Lp[j]:(Lp[j + 1] - 1)
       for k ∈ axes(X, 2)
-        X[j, k] += Lx[p] * X[Li[p], k]
+        X[j, k] += conj(Lx[p]) * X[Li[p], k]
       end
     end
   end
@@ -438,7 +438,7 @@ The components of the factorization can be accessed via `getproperty`:
 In order to avoid zero pivots during the factorization, the user can regularize the matrix by modifying 
 `LDL.r1` for the `LDL.n_d` first pivots and `LDL.r2` for the other pivots with tolerance `LDL.tol`.
 """
-mutable struct LDLFactorization{T <: Real, Ti <: Integer, Tn <: Integer, Tp <: Integer}
+mutable struct LDLFactorization{T <: Number, Ti <: Integer, Tn <: Integer, Tp <: Integer}
   __analyzed::Bool
   __factorized::Bool
   __upper::Bool
@@ -472,77 +472,175 @@ Returns true if the most recent factorization stored in `LDL` [`LDLFactorization
 """
 factorized(
   LDL::LDLFactorization{T, Ti, Tn, Tp},
-) where {T <: Real, Ti <: Integer, Tn <: Integer, Tp <: Integer} = LDL.__factorized
+) where {T <: Number, Ti <: Integer, Tn <: Integer, Tp <: Integer} = LDL.__factorized
 
-"""
-    LDL = ldl_analyze(A, P, Tf = eltype(A))
-    LDL = ldl_analyze(A, P)
-    LDL = ldl_analyze(A)
+for (wrapper) in (:Symmetric, :Hermitian)
+  @eval begin
+    """
+        LDL = ldl_analyze(A, P, Tf = eltype(A))
+        LDL = ldl_analyze(A, P)
+        LDL = ldl_analyze(A)
 
-Perform symbolic analysis of the matrix A with permutation vector P (uses an 
-AMD permutation by default) so it can be reused. 
-Tf should be the element type of the factors, and defaults to `eltype(A)`.
-A should be a upper triangular matrix wrapped with LinearAlgebra's Symmetric type.
-"""
-function ldl_analyze(
-  A::Symmetric{T, SparseMatrixCSC{T, Ti}},
-  P::Vector{Tp};
-  Tf::DataType = eltype(A),
-) where {T <: Real, Ti <: Integer, Tp <: Integer}
-  A.uplo == 'U' || error("upper triangle must be supplied")
-  n = size(A, 1)
-  n == size(A, 2) || throw(DimensionMismatch("matrix must be square"))
-  n == length(P) || throw(DimensionMismatch("permutation size mismatch"))
+    Perform symbolic analysis of the matrix A with permutation vector P (uses an
+    AMD permutation by default) so it can be reused.
+    Tf should be the element type of the factors, and defaults to `eltype(A)`.
+    A should be a upper triangular matrix wrapped with LinearAlgebra's Symmetric / Hermitian type.
+    """
+    function ldl_analyze(
+      A::$wrapper{T, SparseMatrixCSC{T, Ti}},
+      P::Vector{Tp};
+      Tf::DataType = eltype(A),
+    ) where {T <: Number, Ti <: Integer, Tp <: Integer}
+      A.uplo == 'U' || error("upper triangle must be supplied")
+      n = size(A, 1)
+      n == size(A, 2) || throw(DimensionMismatch("matrix must be square"))
+      n == length(P) || throw(DimensionMismatch("permutation size mismatch"))
 
-  # allocate space for symbolic analysis
-  parent = Vector{Ti}(undef, n)
-  Lnz = Vector{Ti}(undef, n)
-  flag = Vector{Ti}(undef, n)
-  pinv = Vector{Tp}(undef, n)
-  Lp = Vector{Ti}(undef, n + 1)
+      # allocate space for symbolic analysis
+      parent = Vector{Ti}(undef, n)
+      Lnz = Vector{Ti}(undef, n)
+      flag = Vector{Ti}(undef, n)
+      pinv = Vector{Tp}(undef, n)
+      Lp = Vector{Ti}(undef, n + 1)
 
-  # Compute inverse permutation
-  @inbounds for k = 1:n
-    pinv[P[k]] = k
+      # Compute inverse permutation
+      @inbounds for k = 1:n
+        pinv[P[k]] = k
+      end
+
+      Cp = Vector{Ti}(undef, n + 1)
+      col_symb!(n, A.data.colptr, A.data.rowval, Cp, Lp, pinv)
+      Ci = Vector{Ti}(undef, Cp[end] - 1)
+      col_num!(n, A.data.colptr, A.data.rowval, Ci, Lp, pinv)
+
+      # perform symbolic analysis
+      ldl_symbolic_upper!(n, A.data.colptr, A.data.rowval, Cp, Ci, Lp, parent, Lnz, flag, P, pinv)
+
+      # space for numerical factorization will be allocated later
+      Li = Vector{Ti}(undef, Lp[n] - 1)
+      Lx = Vector{Tf}(undef, Lp[n] - 1)
+      d = Vector{Tf}(undef, n)
+      Y = Vector{Tf}(undef, n)
+      pattern = Vector{Ti}(undef, n)
+      return LDLFactorization(
+        true,
+        false,
+        true,
+        n,
+        parent,
+        Lnz,
+        flag,
+        P,
+        pinv,
+        Lp,
+        Cp,
+        Ci,
+        Li,
+        Lx,
+        d,
+        Y,
+        pattern,
+        zero(Tf),
+        zero(Tf),
+        zero(Tf),
+        n,
+      )
+    end
+
+    # convert dense to sparse
+    ldl_analyze(A::$wrapper{T, Matrix{T}}; Tf = eltype(A)) where {T <: Number} =
+      ldl_analyze($wrapper(sparse(A.data)), Tf = Tf)
+    ldl_analyze(A::$wrapper{T, Matrix{T}}, P; Tf = eltype(A)) where {T <: Number} =
+      ldl_analyze($wrapper(sparse(A.data)), P, Tf = Tf)
+
+    # use AMD permuation by default
+    ldl_analyze(
+      A::$wrapper{T, SparseMatrixCSC{T, Ti}};
+      Tf = eltype(A),
+    ) where {T <: Number, Ti <: Integer} = ldl_analyze(A, amd(A), Tf = Tf)
+
+    """
+        ldl_factorize!(A, S)
+
+    Factorize A into the S [`LDLFactorization`](@ref) struct.
+    """
+    function ldl_factorize!(
+      A::$wrapper{T, SparseMatrixCSC{T, Ti}},
+      S::LDLFactorization{Tf, Ti, Tn, Tp},
+    ) where {T <: Number, Tf <: Number, Ti <: Integer, Tn <: Integer, Tp <: Integer}
+      S.__analyzed || error("perform symbolic analysis prior to numerical factorization")
+      n = size(A, 1)
+      n == S.n || throw(DimensionMismatch("matrix size is inconsistent with symbolic analysis object"))
+
+      # perform numerical factorization
+      S.__factorized = ldl_numeric_upper!(
+        S.n,
+        A.data.colptr,
+        A.data.rowval,
+        A.data.nzval,
+        S.Cp,
+        S.Ci,
+        S.Lp,
+        S.parent,
+        S.Lnz,
+        S.Li,
+        S.Lx,
+        S.d,
+        S.Y,
+        S.pattern,
+        S.flag,
+        S.P,
+        S.pinv,
+        S.r1,
+        S.r2,
+        S.tol,
+        S.n_d,
+      )
+      return S
+    end
+
+    # convert dense to sparse
+    ldl_factorize!(A::$wrapper{T, Matrix{T}}, S::LDLFactorization) where {T <: Number} =
+      ldl_factorize!($wrapper(sparse(A.data)), S)
+
+    # symmetric or hermitian matrix input
+    """
+        S = ldl(A, P, Tf = eltype(A))
+        S = ldl(A, P)
+        S = ldl(A)
+
+    Compute the LDLᵀ factorization of the matrix A with permutation vector P (uses an
+    AMD permutation by default).
+    Tf should be the element type of the factors, and defaults to `eltype(A)`.
+    This function is equivalent to:
+
+        S = ldl_analyze(A)
+        ldl_factorize!(A, S)
+
+    A should either be a upper triangular matrix wrapped with LinearAlgebra's Symmetric / Hermitian
+    type, or a symmetric / hermitian matrix (not wrapped with Symmetric / Hermitian).
+
+    Using a non upper triangular matrix wrapped with Symmetric or Hermitian will not give the LDLᵀ factorization
+    of A.
+    """
+    function ldl(
+      sA::$wrapper{T, SparseMatrixCSC{T, Ti}},
+      P::Vector{Tp};
+      Tf::DataType = eltype(sA),
+    ) where {T <: Number, Ti <: Integer, Tp <: Integer}
+      sA.uplo == 'L' && error("matrix must contain the upper triangle")
+      # ldl(sA.data, args...; upper = true )
+      S = ldl_analyze(sA, P, Tf = Tf)
+      ldl_factorize!(sA, S)
+    end
+
+    ldl(sA::$wrapper{T, Matrix{T}}; Tf = eltype(sA)) where {T <: Number} =
+      ldl($wrapper(sparse(sA.data)), Tf = Tf)
+    ldl(sA::$wrapper{T, Matrix{T}}, P; Tf = eltype(sA)) where {T <: Number} =
+      ldl($wrapper(sparse(sA.data)), P, Tf = Tf)
+    ldl(sA::$wrapper{T, SparseMatrixCSC{T, Ti}}; Tf = eltype(sA)) where {T <: Number, Ti <: Integer} =
+      ldl(sA, amd(sA), Tf = Tf)
   end
-
-  Cp = Vector{Ti}(undef, n + 1)
-  col_symb!(n, A.data.colptr, A.data.rowval, Cp, Lp, pinv)
-  Ci = Vector{Ti}(undef, Cp[end] - 1)
-  col_num!(n, A.data.colptr, A.data.rowval, Ci, Lp, pinv)
-
-  # perform symbolic analysis
-  ldl_symbolic_upper!(n, A.data.colptr, A.data.rowval, Cp, Ci, Lp, parent, Lnz, flag, P, pinv)
-
-  # space for numerical factorization will be allocated later
-  Li = Vector{Ti}(undef, Lp[n] - 1)
-  Lx = Vector{Tf}(undef, Lp[n] - 1)
-  d = Vector{Tf}(undef, n)
-  Y = Vector{Tf}(undef, n)
-  pattern = Vector{Ti}(undef, n)
-  return LDLFactorization(
-    true,
-    false,
-    true,
-    n,
-    parent,
-    Lnz,
-    flag,
-    P,
-    pinv,
-    Lp,
-    Cp,
-    Ci,
-    Li,
-    Lx,
-    d,
-    Y,
-    pattern,
-    zero(Tf),
-    zero(Tf),
-    zero(Tf),
-    n,
-  )
 end
 
 # convert dense to sparse
@@ -640,11 +738,11 @@ ldl(sA::Symmetric{T, SparseMatrixCSC{T, Ti}}; Tf = eltype(sA)) where {T <: Real,
   ldl(sA, amd(sA), Tf = Tf)
 
 # convert dense to sparse
-ldl(A::Matrix{T}; Tf = eltype(A)) where {T <: Real} = ldl(sparse(A), Tf = Tf)
-ldl(A::Matrix{T}, P; Tf = eltype(A)) where {T <: Real} = ldl(sparse(A), P, Tf = Tf)
+ldl(A::Matrix{T}; Tf = eltype(A)) where {T <: Number} = ldl(sparse(A), Tf = Tf)
+ldl(A::Matrix{T}, P; Tf = eltype(A)) where {T <: Number} = ldl(sparse(A), P, Tf = Tf)
 
 # use AMD permutation by default
-ldl(A::SparseMatrixCSC{T, Ti}; Tf = eltype(A)) where {T <: Real, Ti <: Integer} =
+ldl(A::SparseMatrixCSC{T, Ti}; Tf = eltype(A)) where {T <: Number, Ti <: Integer} =
   ldl(A, amd(A), Tf = Tf)
 
 # use ldl(A, collect(1:n)) to suppress permutation
@@ -652,7 +750,7 @@ function ldl_analyze(
   A::SparseMatrixCSC{T, Ti},
   P::Vector{Tp};
   Tf::DataType = eltype(A),
-) where {T <: Real, Ti <: Integer, Tp <: Integer}
+) where {T <: Number, Ti <: Integer, Tp <: Integer}
   n = size(A, 1)
   n == size(A, 2) || throw(DimensionMismatch("matrix must be square"))
   n == length(P) || throw(DimensionMismatch("permutation size mismatch"))
@@ -705,19 +803,18 @@ function ldl_analyze(
 end
 
 # convert dense to sparse
-ldl_analyze(A::Matrix{T}; Tf = eltype(A)) where {T <: Real} = ldl_analyze(sparse(A), Tf = Tf)
-ldl_analyze(A::Matrix{T}, P; Tf = eltype(A)) where {T <: Real} =
-  ldl_analyze(sparse(A), P, Tf = Tf)
+ldl_analyze(A::Matrix{T}; Tf = eltype(A)) where {T <: Number} = ldl_analyze(sparse(A), Tf = Tf)
+ldl_analyze(A::Matrix{T}, P; Tf = eltype(A)) where {T <: Number} = ldl_analyze(sparse(A), P, Tf = Tf)
 
 # use AMD permuation by default
-ldl_analyze(A::SparseMatrixCSC{T, Ti}; Tf = eltype(A)) where {T <: Real, Ti <: Integer} =
+ldl_analyze(A::SparseMatrixCSC{T, Ti}; Tf = eltype(A)) where {T <: Number, Ti <: Integer} =
   ldl_analyze(A, amd(A), Tf = Tf)
 
 function ldl_factorize!(
   A::SparseMatrixCSC{T, Ti},
   S::LDLFactorization{Tf, Ti, Tn, Tp},
-) where {T <: Real, Tf <: Real, Ti <: Integer, Tn <: Integer, Tp <: Integer}
-  S.__upper && error("symbolic analysis was performed for a Symmetric{} matrix")
+) where {T <: Number, Tf <: Number, Ti <: Integer, Tn <: Integer, Tp <: Integer}
+  S.__upper && error("symbolic analysis was performed for a Symmetric{} / Hermitian{} matrix")
   S.__analyzed || error("perform symbolic analysis prior to numerical factorization")
   n = size(A, 1)
   n == S.n || throw(DimensionMismatch("matrix size is inconsistent with symbolic analysis object"))
@@ -743,7 +840,7 @@ function ldl_factorize!(
 end
 
 # convert dense to sparse
-ldl_factorize!(A::Matrix{T}, S::LDLFactorization) where {T <: Real} = ldl_factorize!(sparse(A), S)
+ldl_factorize!(A::Matrix{T}, S::LDLFactorization) where {T <: Number} = ldl_factorize!(sparse(A), S)
 
 function ldl(A::SparseMatrixCSC, P::Vector{Tp}; Tf = eltype(A)) where {Tp <: Integer}
   S = ldl_analyze(A, P, Tf = Tf)
@@ -760,7 +857,7 @@ If LDL is the LDLᵀ factorization of A, solves ``A x = b``.
 function (\)(
   LDL::LDLFactorization{Tf, Ti, Tn, Tp},
   b::AbstractVector{T},
-) where {T <: Real, Tf <: Real, Ti <: Integer, Tn <: Integer, Tp <: Integer}
+) where {T <: Number, Tf <: Number, Ti <: Integer, Tn <: Integer, Tp <: Integer}
   y = copy(b)
   LDL.__factorized || throw(SQDException(error_string))
   ldl_solve!(LDL.n, y, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
@@ -769,7 +866,7 @@ end
 function (\)(
   LDL::LDLFactorization{Tf, Ti, Tn, Tp},
   B::AbstractMatrix{T},
-) where {T <: Real, Tf <: Real, Ti <: Integer, Tn <: Integer, Tp <: Integer}
+) where {T <: Number, Tf <: Number, Ti <: Integer, Tn <: Integer, Tp <: Integer}
   Y = copy(B)
   LDL.__factorized || throw(SQDException(error_string))
   ldl_solve!(LDL.n, Y, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
@@ -785,14 +882,14 @@ If LDL is the LDLᵀ factorization of A, solves `A x = b` and overwrites b with 
 @inline ldiv!(
   LDL::LDLFactorization{Tf, Ti, Tn, Tp},
   b::AbstractVector{T},
-) where {T <: Real, Tf <: Real, Ti <: Integer, Tn <: Integer, Tp <: Integer} =
+) where {T <: Number, Tf <: Number, Ti <: Integer, Tn <: Integer, Tp <: Integer} =
   LDL.__factorized ? ldl_solve!(LDL.n, b, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P) :
   throw(SQDException(error_string))
 
 @inline ldiv!(
   LDL::LDLFactorization{Tf, Ti, Tn, Tp},
   B::AbstractMatrix{T},
-) where {T <: Real, Tf <: Real, Ti <: Integer, Tn <: Integer, Tp <: Integer} =
+) where {T <: Number, Tf <: Number, Ti <: Integer, Tn <: Integer, Tp <: Integer} =
   LDL.__factorized ? ldl_solve!(LDL.n, B, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P) :
   throw(SQDException(error_string))
 
@@ -805,7 +902,7 @@ function ldiv!(
   y::AbstractVector{T},
   LDL::LDLFactorization{Tf, Ti, Tn, Tp},
   b::AbstractVector{T},
-) where {T <: Real, Tf <: Real, Ti <: Integer, Tn <: Integer, Tp <: Integer}
+) where {T <: Number, Tf <: Number, Ti <: Integer, Tn <: Integer, Tp <: Integer}
   y .= b
   LDL.__factorized || throw(SQDException(error_string))
   ldl_solve!(LDL.n, y, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
@@ -813,9 +910,9 @@ end
 
 function ldiv!(
   Y::AbstractMatrix{T},
-  LDL::LDLFactorization{Tf, Ti},
+  LDL::LDLFactorization{Tf, Ti, Tn, Tp},
   B::AbstractMatrix{T},
-) where {T <: Real, Tf <: Real, Ti <: Integer, Tn <: Integer, Tp <: Integer}
+) where {T <: Number, Tf <: Number, Ti <: Integer, Tn <: Integer, Tp <: Integer}
   Y .= B
   LDL.__factorized || throw(SQDException(error_string))
   ldl_solve!(LDL.n, Y, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
@@ -825,7 +922,7 @@ import LinearAlgebra.lmul!, LinearAlgebra.mul!
 function lmul!(
   LDL::LDLFactorization{Tf, Ti, Tn, Tp},
   x::AbstractVector{T},
-) where {T <: Real, Tf <: Real, Ti <: Integer, Tn <: Integer, Tp <: Integer}
+) where {T <: Number, Tf <: Number, Ti <: Integer, Tn <: Integer, Tp <: Integer}
   LDL.__factorized || throw(SQDException(error_string))
   ldl_mul!(LDL.n, x, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
 end
@@ -833,7 +930,7 @@ end
 function lmul!(
   LDL::LDLFactorization{Tf, Ti, Tn, Tp},
   X::AbstractMatrix{T},
-) where {T <: Real, Tf <: Real, Ti <: Integer, Tn <: Integer, Tp <: Integer}
+) where {T <: Number, Tf <: Number, Ti <: Integer, Tn <: Integer, Tp <: Integer}
   LDL.__factorized || throw(SQDException(error_string))
   ldl_mul!(LDL.n, X, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
 end
@@ -842,7 +939,7 @@ function mul!(
   y::AbstractVector{T},
   LDL::LDLFactorization{Tf, Ti, Tn, Tp},
   x::AbstractVector{T},
-) where {T <: Real, Tf <: Real, Ti <: Integer, Tn <: Integer, Tp <: Integer}
+) where {T <: Number, Tf <: Number, Ti <: Integer, Tn <: Integer, Tp <: Integer}
   y .= x
   LDL.__factorized || throw(SQDException(error_string))
   ldl_mul!(LDL.n, y, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
@@ -852,7 +949,7 @@ function mul!(
   Y::AbstractMatrix{T},
   LDL::LDLFactorization{Tf, Ti, Tn, Tp},
   X::AbstractMatrix{T},
-) where {T <: Real, Tf <: Real, Ti <: Integer, Tn <: Integer, Tp <: Integer}
+) where {T <: Number, Tf <: Number, Ti <: Integer, Tn <: Integer, Tp <: Integer}
   Y .= X
   LDL.__factorized || throw(SQDException(error_string))
   ldl_mul!(LDL.n, Y, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
@@ -885,7 +982,7 @@ Unary minus operator returns an `LDLFactorization` with `-LDL.d`.
 """
 function (-)(
   LDL::LDLFactorization{Tf, Ti, Tn, Tp},
-) where {Tf <: Real, Ti <: Integer, Tn <: Integer, Tp <: Integer}
+) where {Tf <: Number, Ti <: Integer, Tn <: Integer, Tp <: Integer}
   LDL.d .= -LDL.d
   return LDL
 end
