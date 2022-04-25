@@ -706,8 +706,7 @@ end
 
 # convert dense to sparse
 ldl_analyze(A::Matrix{T}; Tf = eltype(A)) where {T <: Real} = ldl_analyze(sparse(A), Tf = Tf)
-ldl_analyze(A::Matrix{T}, P; Tf = eltype(A)) where {T <: Real} =
-  ldl_analyze(sparse(A), P, Tf = Tf)
+ldl_analyze(A::Matrix{T}, P; Tf = eltype(A)) where {T <: Real} = ldl_analyze(sparse(A), P, Tf = Tf)
 
 # use AMD permuation by default
 ldl_analyze(A::SparseMatrixCSC{T, Ti}; Tf = eltype(A)) where {T <: Real, Ti <: Integer} =
