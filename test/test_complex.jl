@@ -1,6 +1,7 @@
 @testset "complex" begin
   @testset "factorizable" begin
     # this matrix possesses an LDLᵀ factorization without pivoting
+    #! format: off
     A = [
       1.7     0       0   0   0       0   0       0       0.13+im 0
       0       1.0     0   0   0.02+im 0   0       0       0       0.01+im
@@ -13,6 +14,7 @@
       0.13-im 0       0   0   0.52-im 0   0       0.11-im 1.4     0
       0       0.01-im 0   0   0.53-im 0   0.56-im 0       0       3.1
     ]
+    #! format: on
     b = [0.287+0.9im, 0.22+1.5im, 0.45, 0.44, 2.486+3.2im, 0.72, 1.55+0.5im, 1.424+0.4im, 1.621-1.4im, 3.759-1.4im]
     ϵ = sqrt(eps(real(eltype(A))))
 
@@ -45,6 +47,7 @@
 
   @testset "factorizable_upper" begin
     # Using only the upper triangle tests
+    #! format: off
     A = [
       1.7     0       0   0   0       0   0       0       0.13+im 0
       0       1.0     0   0   0.02+im 0   0       0       0       0.01+im
@@ -57,6 +60,7 @@
       0.13-im 0       0   0   0.52-im 0   0       0.11-im 1.4     0
       0       0.01-im 0   0   0.53-im 0   0.56-im 0       0       3.1
     ]
+    #! format: on
     b = [0.287+0.9im, 0.22+1.5im, 0.45, 0.44, 2.486+3.2im, 0.72, 1.55+0.5im, 1.424+0.4im, 1.621-1.4im, 3.759-1.4im]
     ϵ = sqrt(eps(real(eltype(A))))
     LDLT = ldl(A)
