@@ -570,7 +570,8 @@ for (wrapper) in (:Symmetric, :Hermitian)
     ) where {T <: Number, Tf <: Number, Ti <: Integer, Tn <: Integer, Tp <: Integer}
       S.__analyzed || error("perform symbolic analysis prior to numerical factorization")
       n = size(A, 1)
-      n == S.n || throw(DimensionMismatch("matrix size is inconsistent with symbolic analysis object"))
+      n == S.n ||
+        throw(DimensionMismatch("matrix size is inconsistent with symbolic analysis object"))
 
       # perform numerical factorization
       S.__factorized = ldl_numeric_upper!(
@@ -638,8 +639,10 @@ for (wrapper) in (:Symmetric, :Hermitian)
       ldl($wrapper(sparse(sA.data)), Tf = Tf)
     ldl(sA::$wrapper{T, Matrix{T}}, P; Tf = eltype(sA)) where {T <: Number} =
       ldl($wrapper(sparse(sA.data)), P, Tf = Tf)
-    ldl(sA::$wrapper{T, SparseMatrixCSC{T, Ti}}; Tf = eltype(sA)) where {T <: Number, Ti <: Integer} =
-      ldl(sA, amd(sA), Tf = Tf)
+    ldl(
+      sA::$wrapper{T, SparseMatrixCSC{T, Ti}};
+      Tf = eltype(sA),
+    ) where {T <: Number, Ti <: Integer} = ldl(sA, amd(sA), Tf = Tf)
   end
 end
 
@@ -804,7 +807,8 @@ end
 
 # convert dense to sparse
 ldl_analyze(A::Matrix{T}; Tf = eltype(A)) where {T <: Number} = ldl_analyze(sparse(A), Tf = Tf)
-ldl_analyze(A::Matrix{T}, P; Tf = eltype(A)) where {T <: Number} = ldl_analyze(sparse(A), P, Tf = Tf)
+ldl_analyze(A::Matrix{T}, P; Tf = eltype(A)) where {T <: Number} =
+  ldl_analyze(sparse(A), P, Tf = Tf)
 
 # use AMD permuation by default
 ldl_analyze(A::SparseMatrixCSC{T, Ti}; Tf = eltype(A)) where {T <: Number, Ti <: Integer} =
