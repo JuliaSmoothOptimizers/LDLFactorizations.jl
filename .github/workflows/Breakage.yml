@@ -14,6 +14,7 @@ jobs:
       matrix:
         pkg: [
           "JuliaSmoothOptimizers/DCI.jl",
+          "JuliaSmoothOptimizers/FletcherPenaltySolver.jl",
           "JuliaSmoothOptimizers/CaNNOLeS.jl",
           "JuliaSmoothOptimizers/RipQP.jl"
         ]
