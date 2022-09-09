@@ -276,7 +276,7 @@ end
 function ldl_lsolve!(n, x::AbstractVector, Lp, Li, Lx)
   @inbounds for j = 1:n
     xj = x[j]
-    @inbounds for p = Lp[j]:(Lp[j + 1] - 1)
+    @simd for p = Lp[j]:(Lp[j + 1] - 1)
       x[Li[p]] -= Lx[p] * xj
     end
   end
@@ -284,16 +284,14 @@ function ldl_lsolve!(n, x::AbstractVector, Lp, Li, Lx)
 end
 
 function ldl_dsolve!(n, x::AbstractVector, D)
-  @inbounds for j = 1:n
-    x[j] /= D[j]
-  end
+  x ./= D
   return x
 end
 
 function ldl_ltsolve!(n, x::AbstractVector, Lp, Li, Lx)
   @inbounds for j = n:-1:1
     xj = x[j]
-    @inbounds for p = Lp[j]:(Lp[j + 1] - 1)
+    @simd for p = Lp[j]:(Lp[j + 1] - 1)
       xj -= conj(Lx[p]) * x[Li[p]]
     end
     x[j] = xj
