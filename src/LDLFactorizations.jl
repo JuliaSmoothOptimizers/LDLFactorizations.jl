@@ -475,20 +475,20 @@ factorized(
 for (wrapper) in (:Symmetric, :Hermitian)
   @eval begin
     """
-        LDL = ldl_analyze(A, P, Tf = eltype(A))
-        LDL = ldl_analyze(A, P)
+        LDL = ldl_analyze(A, Tf; P = amd(A))
+        LDL = ldl_analyze(A; P = amd(A))
         LDL = ldl_analyze(A)
 
-    Perform symbolic analysis of the matrix A with permutation vector P (uses an
+    Perform symbolic analysis of the matrix `A` with permutation vector `P` (uses an
     AMD permutation by default) so it can be reused.
-    Tf should be the element type of the factors, and defaults to `eltype(A)`.
-    A should be a upper triangular matrix wrapped with LinearAlgebra's Symmetric / Hermitian type.
+    `Tf` should be the element type of the factors, and is set to `eltype(A)` if not provided.
+    `A` should be a upper triangular matrix wrapped with LinearAlgebra's Symmetric / Hermitian type.
     """
     function ldl_analyze(
       A::$wrapper{T, SparseMatrixCSC{T, Ti}},
-      P::Vector{Tp};
-      Tf::DataType = eltype(A),
-    ) where {T <: Number, Ti <: Integer, Tp <: Integer}
+      ::Type{Tf};
+      P::Vector{Tp} = amd(A)
+    ) where {T <: Number, Ti <: Integer, Tp <: Integer, Tf <: Number}
       A.uplo == 'U' || error("upper triangle must be supplied")
       n = size(A, 1)
       n == size(A, 2) || throw(DimensionMismatch("matrix must be square"))
@@ -545,17 +545,14 @@ for (wrapper) in (:Symmetric, :Hermitian)
       )
     end
 
-    # convert dense to sparse
-    ldl_analyze(A::$wrapper{T, Matrix{T}}; Tf = eltype(A)) where {T <: Number} =
-      ldl_analyze($wrapper(sparse(A.data)), Tf = Tf)
-    ldl_analyze(A::$wrapper{T, Matrix{T}}, P; Tf = eltype(A)) where {T <: Number} =
-      ldl_analyze($wrapper(sparse(A.data)), P, Tf = Tf)
+    ldl_analyze(A::$wrapper{T, SparseMatrixCSC{T, Ti}}; kwargs...) where {T <: Number, Ti <: Integer} =
+      ldl_analyze(A, T, kwargs...)
 
-    # use AMD permuation by default
-    ldl_analyze(
-      A::$wrapper{T, SparseMatrixCSC{T, Ti}};
-      Tf = eltype(A),
-    ) where {T <: Number, Ti <: Integer} = ldl_analyze(A, amd(A), Tf = Tf)
+    # convert dense to sparse
+    ldl_analyze(A::$wrapper{T, Matrix{T}}, ::Type{Tf}; kwargs...) where {T <: Number, Tf <: Number} =
+      ldl_analyze($wrapper(sparse(A.data)), Tf; kwargs...)
+    ldl_analyze(A::$wrapper{T, Matrix{T}}; kwargs...) where {T <: Number} =
+      ldl_analyze($wrapper(sparse(A.data)); kwargs...)
 
     """
         ldl_factorize!(A, S)
@@ -604,13 +601,13 @@ for (wrapper) in (:Symmetric, :Hermitian)
 
     # symmetric or hermitian matrix input
     """
-        S = ldl(A, P, Tf = eltype(A))
-        S = ldl(A, P)
+        S = ldl(A, Tf; P = amd(A))
+        S = ldl(A; P = amd(A))
         S = ldl(A)
 
     Compute the LDLᵀ factorization of the matrix A with permutation vector P (uses an
     AMD permutation by default).
-    Tf should be the element type of the factors, and defaults to `eltype(A)`.
+    `Tf` should be the element type of the factors, and is set to `eltype(A)` if not provided.
     This function is equivalent to:
 
         S = ldl_analyze(A)
@@ -624,23 +621,22 @@ for (wrapper) in (:Symmetric, :Hermitian)
     """
     function ldl(
       sA::$wrapper{T, SparseMatrixCSC{T, Ti}},
-      P::Vector{Tp};
-      Tf::DataType = eltype(sA),
-    ) where {T <: Number, Ti <: Integer, Tp <: Integer}
+      ::Type{Tf},
+      P::Vector{Tp} = amd(sA);
+    ) where {T <: Number, Ti <: Integer, Tp <: Integer, Tf <: Number}
       sA.uplo == 'L' && error("matrix must contain the upper triangle")
       # ldl(sA.data, args...; upper = true )
-      S = ldl_analyze(sA, P, Tf = Tf)
+      S = ldl_analyze(sA, Tf; P = P)
       ldl_factorize!(sA, S)
     end
 
-    ldl(sA::$wrapper{T, Matrix{T}}; Tf = eltype(sA)) where {T <: Number} =
-      ldl($wrapper(sparse(sA.data)), Tf = Tf)
-    ldl(sA::$wrapper{T, Matrix{T}}, P; Tf = eltype(sA)) where {T <: Number} =
-      ldl($wrapper(sparse(sA.data)), P, Tf = Tf)
-    ldl(
-      sA::$wrapper{T, SparseMatrixCSC{T, Ti}};
-      Tf = eltype(sA),
-    ) where {T <: Number, Ti <: Integer} = ldl(sA, amd(sA), Tf = Tf)
+    ldl(sA::$wrapper{T, SparseMatrixCSC{T, Ti}}; kwargs...) where {T <: Number, Ti <: Integer} =
+      ldl(sA, T; kwargs...)
+
+    ldl(sA::$wrapper{T, Matrix{T}}, ::Type{Tf}; kwargs...) where {T <: Number, Tf <: Number} =
+      ldl($wrapper(sparse(sA.data)), Tf; kwargs...)
+    ldl(sA::$wrapper{T, Matrix{T}}; kwargs...) where {T <: Number} =
+      ldl($wrapper(sparse(sA.data)), T; kwargs...)
   end
 end
 
