@@ -472,18 +472,60 @@ factorized(
   LDL::LDLFactorization{T, Ti, Tn, Tp},
 ) where {T <: Number, Ti <: Integer, Tn <: Integer, Tp <: Integer} = LDL.__factorized
 
+"""
+    LDL = ldl_analyze(A, Tf; P = amd(A))
+    LDL = ldl_analyze(A; P = amd(A))
+    LDL = ldl_analyze(A)
+
+Perform symbolic analysis of the matrix `A` with permutation vector `P` (uses an
+AMD permutation by default) so it can be reused.
+`Tf` should be the element type of the factors, and is set to `eltype(A)` if not provided.
+`A` should be a upper triangular matrix wrapped with LinearAlgebra's Symmetric / Hermitian type.
+
+# Example
+    A = sprand(Float64, 10, 10, 0.2)
+    As = Symmetric(triu(A * A' + I), :U)
+    LDL = ldl_analyze(As) # LDL in Float64
+    LDL = ldl_analyze(As, Float32) # LDL in Float64
+"""
+function ldl_analyze end
+
+"""
+    ldl_factorize!(A, S)
+
+Factorize A into the S [`LDLFactorization`](@ref) struct.
+"""
+function ldl_factorize! end
+
+"""
+    S = ldl(A, Tf; P = amd(A))
+    S = ldl(A; P = amd(A))
+    S = ldl(A)
+
+Compute the LDLᵀ factorization of the matrix A with permutation vector P (uses an
+AMD permutation by default).
+`Tf` should be the element type of the factors, and is set to `eltype(A)` if not provided.
+This function is equivalent to:
+
+    S = ldl_analyze(A)
+    ldl_factorize!(A, S)
+
+A should either be a upper triangular matrix wrapped with LinearAlgebra's Symmetric / Hermitian
+type, or a symmetric / hermitian matrix (not wrapped with Symmetric / Hermitian).
+
+Using a non upper triangular matrix wrapped with Symmetric or Hermitian will not give the LDLᵀ factorization
+of A.
+
+# Example
+    A = sprand(Float64, 10, 10, 0.2)
+    As = Symmetric(triu(A * A' + I), :U)
+    LDL = ldl(As) # LDL in Float64
+    LDL = ldl(As, Float32) # LDL in Float64
+"""
+function ldl end
+
 for (wrapper) in (:Symmetric, :Hermitian)
   @eval begin
-    """
-        LDL = ldl_analyze(A, Tf; P = amd(A))
-        LDL = ldl_analyze(A; P = amd(A))
-        LDL = ldl_analyze(A)
-
-    Perform symbolic analysis of the matrix `A` with permutation vector `P` (uses an
-    AMD permutation by default) so it can be reused.
-    `Tf` should be the element type of the factors, and is set to `eltype(A)` if not provided.
-    `A` should be a upper triangular matrix wrapped with LinearAlgebra's Symmetric / Hermitian type.
-    """
     function ldl_analyze(
       A::$wrapper{T, SparseMatrixCSC{T, Ti}},
       ::Type{Tf};
@@ -554,11 +596,6 @@ for (wrapper) in (:Symmetric, :Hermitian)
     ldl_analyze(A::$wrapper{T, Matrix{T}}; kwargs...) where {T <: Number} =
       ldl_analyze($wrapper(sparse(A.data)); kwargs...)
 
-    """
-        ldl_factorize!(A, S)
-
-    Factorize A into the S [`LDLFactorization`](@ref) struct.
-    """
     function ldl_factorize!(
       A::$wrapper{T, SparseMatrixCSC{T, Ti}},
       S::LDLFactorization{Tf, Ti, Tn, Tp},
@@ -600,29 +637,10 @@ for (wrapper) in (:Symmetric, :Hermitian)
       ldl_factorize!($wrapper(sparse(A.data)), S)
 
     # symmetric or hermitian matrix input
-    """
-        S = ldl(A, Tf; P = amd(A))
-        S = ldl(A; P = amd(A))
-        S = ldl(A)
-
-    Compute the LDLᵀ factorization of the matrix A with permutation vector P (uses an
-    AMD permutation by default).
-    `Tf` should be the element type of the factors, and is set to `eltype(A)` if not provided.
-    This function is equivalent to:
-
-        S = ldl_analyze(A)
-        ldl_factorize!(A, S)
-
-    A should either be a upper triangular matrix wrapped with LinearAlgebra's Symmetric / Hermitian
-    type, or a symmetric / hermitian matrix (not wrapped with Symmetric / Hermitian).
-
-    Using a non upper triangular matrix wrapped with Symmetric or Hermitian will not give the LDLᵀ factorization
-    of A.
-    """
     function ldl(
       sA::$wrapper{T, SparseMatrixCSC{T, Ti}},
-      ::Type{Tf},
-      P::Vector{Tp} = amd(sA);
+      ::Type{Tf};
+      P::Vector{Tp} = amd(sA),
     ) where {T <: Number, Ti <: Integer, Tp <: Integer, Tf <: Number}
       sA.uplo == 'L' && error("matrix must contain the upper triangle")
       # ldl(sA.data, args...; upper = true )
@@ -640,20 +658,12 @@ for (wrapper) in (:Symmetric, :Hermitian)
   end
 end
 
-# convert dense to sparse
-ldl(A::Matrix{T}; Tf = eltype(A)) where {T <: Number} = ldl(sparse(A), Tf = Tf)
-ldl(A::Matrix{T}, P; Tf = eltype(A)) where {T <: Number} = ldl(sparse(A), P, Tf = Tf)
-
-# use AMD permutation by default
-ldl(A::SparseMatrixCSC{T, Ti}; Tf = eltype(A)) where {T <: Number, Ti <: Integer} =
-  ldl(A, amd(A), Tf = Tf)
-
-# use ldl(A, collect(1:n)) to suppress permutation
+# use ldl(A, P = collect(1:n)) to suppress permutation
 function ldl_analyze(
   A::SparseMatrixCSC{T, Ti},
-  P::Vector{Tp};
-  Tf::DataType = eltype(A),
-) where {T <: Number, Ti <: Integer, Tp <: Integer}
+  ::Type{Tf};
+  P::Vector{Tp} = amd(A),
+) where {T <: Number, Ti <: Integer, Tp <: Integer, Tf <: Number}
   n = size(A, 1)
   n == size(A, 2) || throw(DimensionMismatch("matrix must be square"))
   n == length(P) || throw(DimensionMismatch("permutation size mismatch"))
@@ -705,14 +715,12 @@ function ldl_analyze(
   )
 end
 
-# convert dense to sparse
-ldl_analyze(A::Matrix{T}; Tf = eltype(A)) where {T <: Number} = ldl_analyze(sparse(A), Tf = Tf)
-ldl_analyze(A::Matrix{T}, P; Tf = eltype(A)) where {T <: Number} =
-  ldl_analyze(sparse(A), P, Tf = Tf)
+ldl_analyze(A::SparseMatrixCSC{T}; kwargs...) where {T <: Number} = ldl_analyze(A, T; kwargs...)
 
-# use AMD permuation by default
-ldl_analyze(A::SparseMatrixCSC{T, Ti}; Tf = eltype(A)) where {T <: Number, Ti <: Integer} =
-  ldl_analyze(A, amd(A), Tf = Tf)
+# convert dense to sparse
+ldl_analyze(A::Matrix{T}, ::Type{Tf}; kwargs...) where {T <: Number, Tf <: Number} =
+  ldl_analyze(sparse(A), Tf; kwargs...)
+ldl_analyze(A::Matrix{T}, kwargs...) where {T <: Number} = ldl_analyze(sparse(A), T, kwargs...)
 
 function ldl_factorize!(
   A::SparseMatrixCSC{T, Ti},
@@ -746,10 +754,15 @@ end
 # convert dense to sparse
 ldl_factorize!(A::Matrix{T}, S::LDLFactorization) where {T <: Number} = ldl_factorize!(sparse(A), S)
 
-function ldl(A::SparseMatrixCSC, P::Vector{Tp}; Tf = eltype(A)) where {Tp <: Integer}
-  S = ldl_analyze(A, P, Tf = Tf)
+function ldl(A::SparseMatrixCSC, ::Type{Tf}; kwargs...) where {Tf <: Number}
+  S = ldl_analyze(A, Tf; kwargs...)
   ldl_factorize!(A, S)
 end
+
+ldl(A::SparseMatrixCSC{T}; kwargs...) where {T <: Number} = ldl(sparse(A), T; kwargs...)
+
+ldl(A::Matrix{T}, ::Type{Tf}; kwargs...) where {T <: Number, Tf <: Number} = ldl(sparse(A), Tf; kwargs...)
+ldl(A::Matrix{T}; kwargs...) where {T <: Number} = ldl(sparse(A), T; kwargs...)
 
 import Base.(\)
 

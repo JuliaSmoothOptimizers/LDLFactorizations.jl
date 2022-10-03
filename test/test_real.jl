@@ -49,7 +49,7 @@
       0 1
       1 1
     ]
-    S = ldl(A, [1, 2])
+    S = ldl(A, P = [1, 2])
     @test !factorized(S)
 
     A = Symmetric(sparse(triu(A)))
@@ -144,7 +144,7 @@
 
     # test with a permutation of a different int type
     p = Int32.(collect(size(A, 1):-1:1))
-    LDLT_upper = ldl(A_upper, p)
+    LDLT_upper = ldl(A_upper, P = p)
     x = LDLT_upper \ b
 
     y = collect(0.1:0.1:1)
@@ -174,7 +174,7 @@
       0 1
       1 1
     ])
-    S = ldl(A, [1, 2])
+    S = ldl(A, P = [1, 2])
     @test !factorized(S)
 
     S = ldl_analyze(Symmetric(A, :U))
@@ -388,24 +388,24 @@
     ϵ = sqrt(eps(eltype(A)))
     m, n = size(A)
 
-    LDL32 = ldl_analyze(A, Tf = Float32)
+    LDL32 = ldl_analyze(A, Float32)
     @test typeof(LDL32) == LDLFactorizations.LDLFactorization{Float32, Int, Int, Int}
     @test eltype(LDL32) == Float32
     ldl_factorize!(A, LDL32)
     @test LDL32.__factorized
 
-    LDL32 = ldl_analyze(Symmetric(triu(A), :U), Tf = Float32)
+    LDL32 = ldl_analyze(Symmetric(triu(A), :U), Float32)
     @test typeof(LDL32) == LDLFactorizations.LDLFactorization{Float32, Int, Int, Int}
     @test eltype(LDL32) == Float32
     ldl_factorize!(Symmetric(triu(A), :U), LDL32)
     @test LDL32.__factorized
 
-    LDL32 = ldl(A, Tf = Float32)
+    LDL32 = ldl(A, Float32)
     @test typeof(LDL32) == LDLFactorizations.LDLFactorization{Float32, Int, Int, Int}
     @test eltype(LDL32) == Float32
     @test LDL32.__factorized
 
-    LDL32 = ldl(Symmetric(triu(A), :U), Tf = Float32)
+    LDL32 = ldl(Symmetric(triu(A), :U), Float32)
     @test typeof(LDL32) == LDLFactorizations.LDLFactorization{Float32, Int, Int, Int}
     @test eltype(LDL32) == Float32
     @test LDL32.__factorized
