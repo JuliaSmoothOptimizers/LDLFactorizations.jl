@@ -587,12 +587,17 @@ for (wrapper) in (:Symmetric, :Hermitian)
       )
     end
 
-    ldl_analyze(A::$wrapper{T, SparseMatrixCSC{T, Ti}}; kwargs...) where {T <: Number, Ti <: Integer} =
-      ldl_analyze(A, T, kwargs...)
+    ldl_analyze(
+      A::$wrapper{T, SparseMatrixCSC{T, Ti}};
+      kwargs...,
+    ) where {T <: Number, Ti <: Integer} = ldl_analyze(A, T, kwargs...)
 
     # convert dense to sparse
-    ldl_analyze(A::$wrapper{T, Matrix{T}}, ::Type{Tf}; kwargs...) where {T <: Number, Tf <: Number} =
-      ldl_analyze($wrapper(sparse(A.data)), Tf; kwargs...)
+    ldl_analyze(
+      A::$wrapper{T, Matrix{T}},
+      ::Type{Tf};
+      kwargs...,
+    ) where {T <: Number, Tf <: Number} = ldl_analyze($wrapper(sparse(A.data)), Tf; kwargs...)
     ldl_analyze(A::$wrapper{T, Matrix{T}}; kwargs...) where {T <: Number} =
       ldl_analyze($wrapper(sparse(A.data)); kwargs...)
 
@@ -761,7 +766,8 @@ end
 
 ldl(A::SparseMatrixCSC{T}; kwargs...) where {T <: Number} = ldl(sparse(A), T; kwargs...)
 
-ldl(A::Matrix{T}, ::Type{Tf}; kwargs...) where {T <: Number, Tf <: Number} = ldl(sparse(A), Tf; kwargs...)
+ldl(A::Matrix{T}, ::Type{Tf}; kwargs...) where {T <: Number, Tf <: Number} =
+  ldl(sparse(A), Tf; kwargs...)
 ldl(A::Matrix{T}; kwargs...) where {T <: Number} = ldl(sparse(A), T; kwargs...)
 
 import Base.(\)
