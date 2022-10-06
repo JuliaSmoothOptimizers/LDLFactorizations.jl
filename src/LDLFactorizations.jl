@@ -529,7 +529,7 @@ for (wrapper) in (:Symmetric, :Hermitian)
     function ldl_analyze(
       A::$wrapper{T, SparseMatrixCSC{T, Ti}},
       ::Type{Tf};
-      P::Vector{Tp} = amd(A)
+      P::Vector{Tp} = amd(A),
     ) where {T <: Number, Ti <: Integer, Tp <: Integer, Tf <: Number}
       A.uplo == 'U' || error("upper triangle must be supplied")
       n = size(A, 1)
