@@ -117,7 +117,7 @@
 
     # test with a permutation of a different int type
     p = Int32.(collect(size(A, 1):-1:1))
-    LDLT_upper = ldl(A_upper, p)
+    LDLT_upper = ldl(A_upper, P = p)
     x = LDLT_upper \ b
 
     y = collect(0.1:0.1:1)
