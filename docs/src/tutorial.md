@@ -71,13 +71,13 @@ ldl_factorize!(Au, LDL)
 It is possible to factorize a matrix in a different type than the type of its elements:
 
 ```julia
-# with Au in Float64
-LDL64 = ldl(Au) # symbolic analysis in eltype(Au) = Float64
-LDL32 = ldl(Au, Float32) # symbolic analysis in Float32
+# with eltype(Au) == Float64
+LDL64 = ldl(Au) # factorization in eltype(Au) = Float64
+LDL32 = ldl(Au, Float32) # factorization in Float32
 ```
 
 ```julia
-# with Au in Float64
+# with eltype(Au) == Float64
 LDL64 = ldl_analyze(Au) # symbolic analysis in eltype(Au) = Float64
 LDL32 = ldl_analyze(Au, Float32) # symbolic analysis in Float32
 ldl_factorize!(Au, LDL64)
