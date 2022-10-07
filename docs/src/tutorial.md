@@ -66,7 +66,7 @@ LDL.r2 = -ϵ # if any of the n - n_d last pivots |D[i]| < ϵ, then D[i] = sign(L
 ldl_factorize!(Au, LDL)
 ```
 
-## Choose the precision of the factorization
+## Choosing the precision of the factorization
 
 It is possible to factorize a matrix in a different type than the type of its elements:
 
