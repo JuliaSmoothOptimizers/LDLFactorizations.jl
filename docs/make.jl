@@ -3,8 +3,7 @@ using Documenter, LDLFactorizations
 makedocs(
   modules = [LDLFactorizations],
   doctest = true,
-  # linkcheck = true,
-  strict = true,
+  linkcheck = true,
   format = Documenter.HTML(
     assets = ["assets/style.css"],
     prettyurls = get(ENV, "CI", nothing) == "true",
