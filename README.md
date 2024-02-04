@@ -2,8 +2,6 @@
 
 A translation of Tim Davis's Concise LDLᵀ Factorization, part of [SuiteSparse](http://faculty.cse.tamu.edu/davis/suitesparse.html) with several improvements.
 
-Please cite this repository if you use LDLFactorizations.jl in your work: see [`CITATION.bib`](https://github.com/JuliaSmoothOptimizers/LDLFactorizations.jl/blob/main/CITATION.bib).
-
 [![DOI](https://zenodo.org/badge/98073166.svg)](https://zenodo.org/badge/latestdoi/98073166)
 ![CI](https://github.com/JuliaSmoothOptimizers/LDLFactorizations.jl/workflows/CI/badge.svg?branch=main)
 [![Build Status](https://api.cirrus-ci.com/github/JuliaSmoothOptimizers/LDLFactorizations.jl.svg)](https://cirrus-ci.com/github/JuliaSmoothOptimizers/LDLFactorizations.jl)
@@ -69,7 +67,12 @@ Thus the factors satisfy: PAPᵀ = (L + I) D (L + I)ᵀ.
 
 # References
 
-Timothy A. Davis. 2005. Algorithm 849: A concise sparse Cholesky factorization package. ACM Trans. Math. Softw. 31, 4 (December 2005), 587-591. DOI [10.1145/1114268.1114277](http://dx.doi.org/10.1145/1114268.1114277).
+> Timothy A. Davis.
+> Algorithm 849: A concise sparse Cholesky factorization package.
+> ACM Trans. Math. Softw. 31, 4 (December 2005), 587-591.
+> DOI:[10.1145/1114268.1114277](http://dx.doi.org/10.1145/1114268.1114277).
+
+If you use LDLFactorizations.jl in your work, please cite using the format given in [CITATION.cff](CITATION.cff).
 
 Like the original LDL, this package is distributed under the LGPL.
 
