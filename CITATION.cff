@@ -3,7 +3,7 @@
 
 cff-version: 1.2.0
 title: >-
-  'LDLFactorizations.jl: Factorization of Symmetric Matrices'
+  LDLFactorizations.jl: Factorization of Symmetric Matrices
 message: >-
   If you use this software, please cite it using the
   metadata from this file.
@@ -26,6 +26,8 @@ keywords:
   - Linear Algebra
   - Julia
   - Matrix Factorization
-license: MPL-2.0
+license: GNU GPL
+version: 0.10.1
+date-released: '2023-10-18'
 repository-code: >-
   https://github.com/JuliaSmoothOptimizers/LDLFactorizations.jl
