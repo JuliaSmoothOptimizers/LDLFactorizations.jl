@@ -1,5 +1,6 @@
 module LDLFactorizations
 
+export LDLFactorization
 export ldl, ldl_analyze, ldl_factorize!, factorized, \, ldiv!, lmul!, mul!, nnz, -
 
 using AMD, LinearAlgebra, SparseArrays
@@ -436,7 +437,7 @@ The components of the factorization can be accessed via `getproperty`:
 In order to avoid zero pivots during the factorization, the user can regularize the matrix by modifying 
 `LDL.r1` for the `LDL.n_d` first pivots and `LDL.r2` for the other pivots with tolerance `LDL.tol`.
 """
-mutable struct LDLFactorization{T <: Number, Ti <: Integer, Tn <: Integer, Tp <: Integer}
+mutable struct LDLFactorization{T <: Number, Ti <: Integer, Tn <: Integer, Tp <: Integer} <: Factorization
   __analyzed::Bool
   __factorized::Bool
   __upper::Bool
