@@ -527,6 +527,30 @@ of A.
 """
 function ldl end
 
+"""
+    x = ldl_refine!(LDL, x, b; max_iter = 50, tol = eps(T))
+Given an LDLᵀ factorization, and an approximate solution LDLᵀx ≈ b, perform iterative refinement to improve the solution.
+The factorization should have been computed before calling this function (see example below).
+
+# Arguments
+- `LDL::LDLFactorization`: an LDLᵀ factorization;
+- `x::V`: an approximate solution to LDLᵀx ≈ b;
+- `b::V`: the right hand side of the linear system.
+
+# Keyword Arguments
+- `max_iter::Int = 50`: maximum number of iterations to perform;
+- `tol::T = eps(T)`: tolerance for convergence. The algorithm stops when `norm(dx) < tol*norm(x)` where `dx` is the correction computed at each iteration.
+
+# Example
+    A = sprand(Float64, 10, 10, 0.2)
+    As = Symmetric(triu(A * A' + I), :U)
+    LDL = ldl(As)
+    b = randn(10)
+    x_approx = ldiv(LDL, b)
+    x_refined = ldl_refine!(LDL, x_approx, b)
+"""
+function ldl_refine! end
+
 for (wrapper) in (:Symmetric, :Hermitian)
   @eval begin
     function ldl_analyze(
