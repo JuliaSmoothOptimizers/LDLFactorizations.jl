@@ -1,6 +1,6 @@
 module LDLFactorizations
 
-export ldl, ldl_analyze, ldl_factorize!, factorized, \, ldiv!, lmul!, mul!, nnz, -
+export ldl, ldl_analyze, ldl_refine!, ldl_factorize!, factorized, \, ldiv!, lmul!, mul!, nnz, -
 
 using AMD, LinearAlgebra, SparseArrays
 
@@ -461,6 +461,9 @@ mutable struct LDLFactorization{T <: Number, Ti <: Integer, Tn <: Integer, Tp <:
   r2::T
   tol::T
   n_d::Tn
+  # fields related to iterative refinement
+  r::Vector{T}
+  dx::Vector{T}
 end
 
 """
@@ -524,6 +527,30 @@ of A.
 """
 function ldl end
 
+"""
+    x = ldl_refine!(LDL, x, b; max_iter = 50, tol = eps(T))
+Given an LDLᵀ factorization, and an approximate solution LDLᵀx ≈ b, perform iterative refinement to improve the solution.
+The factorization should have been computed before calling this function (see example below).
+
+# Arguments
+- `LDL::LDLFactorization`: an LDLᵀ factorization;
+- `x::V`: an approximate solution to LDLᵀx ≈ b;
+- `b::V`: the right hand side of the linear system.
+
+# Keyword Arguments
+- `max_iter::Int = 50`: maximum number of iterations to perform;
+- `tol::T = eps(T)`: tolerance for convergence. The algorithm stops when `norm(dx) < tol*norm(x)` where `dx` is the correction computed at each iteration.
+
+# Example
+    A = sprand(Float64, 10, 10, 0.2)
+    As = Symmetric(triu(A * A' + I), :U)
+    LDL = ldl(As)
+    b = randn(10)
+    x_approx = ldiv(LDL, b)
+    x_refined = ldl_refine!(LDL, x_approx, b)
+"""
+function ldl_refine! end
+
 for (wrapper) in (:Symmetric, :Hermitian)
   @eval begin
     function ldl_analyze(
@@ -562,6 +589,11 @@ for (wrapper) in (:Symmetric, :Hermitian)
       d = Vector{Tf}(undef, n)
       Y = Vector{Tf}(undef, n)
       pattern = Vector{Ti}(undef, n)
+
+      # space for iterative refinement
+      r = Vector{Tf}(undef, n)
+      dx = Vector{Tf}(undef, n)
+
       return LDLFactorization(
         true,
         false,
@@ -584,6 +616,8 @@ for (wrapper) in (:Symmetric, :Hermitian)
         zero(Tf),
         zero(Tf),
         n,
+        r,
+        dx
       )
     end
 
@@ -695,6 +729,11 @@ function ldl_analyze(
   d = Vector{Tf}(undef, n)
   Y = Vector{Tf}(undef, n)
   pattern = Vector{Ti}(undef, n)
+
+  # space for iterative refinement
+  r = Vector{Tf}(undef, n)
+  dx = Vector{Tf}(undef, n)
+
   return LDLFactorization(
     true,
     false,
@@ -717,6 +756,8 @@ function ldl_analyze(
     zero(Tf),
     zero(Tf),
     n,
+    r,
+    dx
   )
 end
 
@@ -769,6 +810,37 @@ ldl(A::SparseMatrixCSC{T}; kwargs...) where {T <: Number} = ldl(sparse(A), T; kw
 ldl(A::Matrix{T}, ::Type{Tf}; kwargs...) where {T <: Number, Tf <: Number} =
   ldl(sparse(A), Tf; kwargs...)
 ldl(A::Matrix{T}; kwargs...) where {T <: Number} = ldl(sparse(A), T; kwargs...)
+
+function ldl_refine!(
+  LDL::LDLFactorization{Tf, Ti, Tn, Tp}, 
+  x::AbstractVecOrMat{Tf},
+  b::AbstractVecOrMat{Tf}; 
+  max_iter::Int = 50, 
+  tol = eps(real(Tf))
+) where {Tf <: Number, Ti <: Integer, Tn <: Integer, Tp <: Integer}
+
+  # Setup workspace
+  r, dx = LDL.r, LDL.dx
+  solved = false
+  k = 0
+
+  while k < max_iter && !solved
+
+    # Compute residual
+    mul!(r, LDL, x)
+    r .= b .- r # r = b - A*x
+
+    # Compute correction
+    ldiv!(dx, LDL, r) # dx = A\r
+    x .+= dx
+
+    # Update status
+    k = k + 1
+    solved = norm(dx) < tol*norm(x)
+  end
+
+  return x
+end
 
 import Base.(\)
 

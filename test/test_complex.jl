@@ -34,6 +34,8 @@
 
     r = A * x - b
     @test norm(r) ≤ ϵ * norm(b)
+    ldl_refine!(LDLT, x, b)
+    @test norm(LDLT.r) ≤ ϵ^2 * norm(b)
 
     y = collect(0.1:0.1:1)
     @test norm(x - y) ≤ ϵ * norm(y)
@@ -43,6 +45,8 @@
 
     r2 = A * x2 - b
     @test norm(r2) ≤ ϵ * norm(b)
+    ldl_refine!(LDLT, x2, b)
+    @test norm(LDLT.r) ≤ ϵ^2 * norm(b)
 
     @test norm(x2 - y) ≤ ϵ * norm(y)
 
