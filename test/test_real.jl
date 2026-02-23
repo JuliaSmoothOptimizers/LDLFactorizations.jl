@@ -22,6 +22,9 @@
     r = A * x - b
     @test norm(r) ≤ ϵ * norm(b)
 
+    ldl_refine!(LDLT, x, b)
+    @test norm(LDLT.r) ≤ ϵ^2 * norm(b)
+
     y = collect(0.1:0.1:1)
     @test norm(x - y) ≤ ϵ * norm(y)
 
@@ -30,6 +33,9 @@
 
     r2 = A * x2 - b
     @test norm(r2) ≤ ϵ * norm(b)
+
+    ldl_refine!(LDLT, x2, b)
+    @test norm(LDLT.r) ≤ ϵ^2 * norm(b)
 
     @test norm(x2 - y) ≤ ϵ * norm(y)
 
@@ -69,11 +75,17 @@
       r = A * x - b
       @test norm(r) ≤ sqrt(eps(Tf)) * norm(b)
 
+      ldl_refine!(LDLT, x, b)
+      @test norm(LDLT.r) ≤ eps(Tf) * norm(b)
+
       x2 = copy(b)
       ldiv!(LDLT, x2)
       @test norm(x2 - z) ≤ sqrt(eps(Tf)) * norm(z)
       r2 = A * x2 - b
       @test norm(r2) ≤ sqrt(eps(Tf)) * norm(b)
+
+      ldl_refine!(LDLT, x2, b)
+      @test norm(LDLT.r) ≤ eps(Tf) * norm(b)
 
       y = similar(b)
       ldiv!(y, LDLT, b)
@@ -123,12 +135,18 @@
     r = A * x - b
     @test norm(r) ≤ ϵ * norm(b)
 
+    ldl_refine!(LDLT, x, b)
+    @test norm(LDLT.r) ≤ ϵ^2 * norm(b)
+
     x2 = copy(b)
     ldiv!(LDLT, x2)
     @test norm(x2 - y) ≤ ϵ * norm(y)
 
     r2 = A * x2 - b
     @test norm(r2) ≤ ϵ * norm(b)
+
+    ldl_refine!(LDLT, x2, b)
+    @test norm(LDLT.r) ≤ ϵ^2 * norm(b)
 
     @test nnz(LDLT_upper) == nnz(LDLT_upper.L) + length(LDLT_upper.d)
 
@@ -153,12 +171,18 @@
     r = A * x - b
     @test norm(r) ≤ ϵ * norm(b)
 
+    ldl_refine!(LDLT, x, b)
+    @test norm(LDLT.r) ≤ ϵ^2 * norm(b)
+
     x2 = copy(b)
     ldiv!(LDLT, x2)
     @test norm(x2 - y) ≤ ϵ * norm(y)
 
     r2 = A * x2 - b
     @test norm(r2) ≤ ϵ * norm(b)
+
+    ldl_refine!(LDLT, x2, b)
+    @test norm(LDLT.r) ≤ ϵ^2 * norm(b)
 
     # Tests with multiple right-hand sides
     B = 1.0 * [i + j for j = 1:10, i = 0:3]
@@ -192,10 +216,16 @@
       r = A * x - b
       @test norm(r) ≤ sqrt(eps(Tf)) * norm(b)
 
+      ldl_refine!(LDLT, x, b)
+      @test norm(LDLT.r) ≤ eps(Tf) * norm(b)
+
       x2 = copy(b)
       ldiv!(LDLT, x2)
       r2 = A * x2 - b
       @test norm(r2) ≤ sqrt(eps(Tf)) * norm(b)
+
+      ldl_refine!(LDLT, x2, b)
+      @test norm(LDLT.r) ≤ eps(Tf) * norm(b)
 
       @test nnz(LDLT) == nnz(LDLT.L) + length(LDLT.d)
     end
@@ -227,6 +257,8 @@
     x = ldiv!(S, x)
     r = M * x - b
     @test norm(r) ≤ sqrt(eps()) * norm(b)
+    ldl_refine!(S, x, b)
+    @test norm(S.r) ≤ eps() * norm(b)
   end
 
   @testset "SQD" begin
@@ -259,6 +291,8 @@
     x = ldiv!(S, x)
     r = M * x - b
     @test norm(r) ≤ sqrt(eps()) * norm(b)
+    ldl_refine!(S, x, b)
+    @test norm(S.r) ≤ eps() * norm(b)
   end
 
   @testset "SQD_semi_dynamic" begin
@@ -291,6 +325,8 @@
     x = ldiv!(S, x)
     r = M * x - b
     @test norm(r) ≤ sqrt(eps()) * norm(b)
+    ldl_refine!(S, x, b)
+    @test norm(S.r) ≤ eps() * norm(b)
   end
 
   @testset "Test booleans and allocations" begin
@@ -309,8 +345,15 @@
     S = ldl_analyze(M1)
     @test !factorized(S)
     _allocs1 = @allocated ldl_factorize!(M1, S)
+    @test _allocs1 == 0
     @test S.d[11:20] ≈ -ϵ * ones(10)
     @test factorized(S)
+    b = ones(20)
+    x = similar(b)
+    _allocs1 = @allocated ldiv!(x, S, b)
+    @test _allocs1 == 0
+    _allocs1 = @allocated ldl_refine!(S, x, b)
+    @test _allocs1 == 0
     _allocs2 = @allocated ldl_factorize!(M2, S)
     @test S.d[11:20] ≈ -100ϵ * ones(10)
     @test _allocs1 == _allocs2

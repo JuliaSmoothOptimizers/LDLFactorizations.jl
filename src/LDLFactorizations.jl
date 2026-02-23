@@ -1,6 +1,6 @@
 module LDLFactorizations
 
-export ldl, ldl_analyze, ldl_factorize!, factorized, \, ldiv!, lmul!, mul!, nnz, -
+export ldl, ldl_analyze, ldl_refine!, ldl_factorize!, factorized, \, ldiv!, lmul!, mul!, nnz, -
 
 using AMD, LinearAlgebra, SparseArrays
 
@@ -813,11 +813,11 @@ ldl(A::Matrix{T}; kwargs...) where {T <: Number} = ldl(sparse(A), T; kwargs...)
 
 function ldl_refine!(
   LDL::LDLFactorization{Tf, Ti, Tn, Tp}, 
-  x::V,
-  b::V; 
+  x::AbstractVecOrMat{Tf},
+  b::AbstractVecOrMat{Tf}; 
   max_iter::Int = 50, 
-  tol::T = eps(T)
-) where {T <: Number, Tf <: Number, Ti <: Integer, Tn <: Integer, Tp <: Integer, V <: Union{AbstractVector{T}, AbstractMatrix{T}}}
+  tol = eps(real(Tf))
+) where {Tf <: Number, Ti <: Integer, Tn <: Integer, Tp <: Integer}
 
   # Setup workspace
   r, dx = LDL.r, LDL.dx
@@ -827,8 +827,8 @@ function ldl_refine!(
   while k < max_iter && !solved
 
     # Compute residual
-    r.= b
-    mul!(r, LDL, x, -one(T), one(T)) # r = b - Ax
+    mul!(r, LDL, x)
+    r .= b .- r # r = b - A*x
 
     # Compute correction
     ldiv!(dx, LDL, r) # dx = A\r
