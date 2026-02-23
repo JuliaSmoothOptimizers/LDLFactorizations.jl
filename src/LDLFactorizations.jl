@@ -461,6 +461,9 @@ mutable struct LDLFactorization{T <: Number, Ti <: Integer, Tn <: Integer, Tp <:
   r2::T
   tol::T
   n_d::Tn
+  # fields related to iterative refinement
+  r::Vector{T}
+  dx::Vector{T}
 end
 
 """
@@ -562,6 +565,11 @@ for (wrapper) in (:Symmetric, :Hermitian)
       d = Vector{Tf}(undef, n)
       Y = Vector{Tf}(undef, n)
       pattern = Vector{Ti}(undef, n)
+
+      # space for iterative refinement
+      r = Vector{Tf}(undef, n)
+      dx = Vector{Tf}(undef, n)
+
       return LDLFactorization(
         true,
         false,
@@ -584,6 +592,8 @@ for (wrapper) in (:Symmetric, :Hermitian)
         zero(Tf),
         zero(Tf),
         n,
+        r,
+        dx
       )
     end
 
@@ -695,6 +705,11 @@ function ldl_analyze(
   d = Vector{Tf}(undef, n)
   Y = Vector{Tf}(undef, n)
   pattern = Vector{Ti}(undef, n)
+
+  # space for iterative refinement
+  r = Vector{Tf}(undef, n)
+  dx = Vector{Tf}(undef, n)
+
   return LDLFactorization(
     true,
     false,
@@ -717,6 +732,8 @@ function ldl_analyze(
     zero(Tf),
     zero(Tf),
     n,
+    r,
+    dx
   )
 end
 
@@ -769,6 +786,37 @@ ldl(A::SparseMatrixCSC{T}; kwargs...) where {T <: Number} = ldl(sparse(A), T; kw
 ldl(A::Matrix{T}, ::Type{Tf}; kwargs...) where {T <: Number, Tf <: Number} =
   ldl(sparse(A), Tf; kwargs...)
 ldl(A::Matrix{T}; kwargs...) where {T <: Number} = ldl(sparse(A), T; kwargs...)
+
+function ldl_refine!(
+  LDL::LDLFactorization{Tf, Ti, Tn, Tp}, 
+  x::V,
+  b::V; 
+  max_iter::Int = 50, 
+  tol::T = eps(T)
+) where {T <: Number, Tf <: Number, Ti <: Integer, Tn <: Integer, Tp <: Integer, V <: Union{AbstractVector{T}, AbstractMatrix{T}}}
+
+  # Setup workspace
+  r, dx = LDL.r, LDL.dx
+  solved = false
+  k = 0
+
+  while k < max_iter && !solved
+
+    # Compute residual
+    r.= b
+    mul!(r, LDL, x, -one(T), one(T)) # r = b - Ax
+
+    # Compute correction
+    ldiv!(dx, LDL, r) # dx = A\r
+    x .+= dx
+
+    # Update status
+    k = k + 1
+    solved = norm(dx) < tol*norm(x)
+  end
+
+  return x
+end
 
 import Base.(\)
 
