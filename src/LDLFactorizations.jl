@@ -221,9 +221,15 @@ function ldl_numeric_upper!(
       r = P[k] <= n_d ? r1 : r2
       D[k] = sign(r) * max(abs(D[k] + r), abs(r))
     end
-    D[k] == 0 && return false
+    if D[k] == 0
+      if k < n
+        return (false, true)
+      else
+        return (true, true)
+      end
+    end
   end
-  return true
+  return (true, false)
 end
 
 function ldl_numeric!(n, Ap, Ai, Ax, Lp, parent, Lnz, Li, Lx, D, Y, pattern, flag, P, Pinv)
@@ -267,9 +273,15 @@ function ldl_numeric!(n, Ap, Ai, Ax, Lp, parent, Lnz, Li, Lx, D, Y, pattern, fla
       Lnz[i] += 1
       top += 1
     end
-    D[k] == 0 && return false
+    if D[k] == 0
+      if k < n
+        return (false, true)
+      else
+        return (true, true)
+      end
+    end
   end
-  return true
+  return (true, false)
 end
 
 # solve functions for a single rhs
@@ -440,6 +452,7 @@ mutable struct LDLFactorization{T <: Number, Ti <: Integer, Tn <: Integer, Tp <:
   __analyzed::Bool
   __factorized::Bool
   __upper::Bool
+  __singular::Bool
   n::Tn
   # fields related to symbolic analysis
   parent::Vector{Ti}
@@ -566,6 +579,7 @@ for (wrapper) in (:Symmetric, :Hermitian)
         true,
         false,
         true,
+        true,
         n,
         parent,
         Lnz,
@@ -611,7 +625,7 @@ for (wrapper) in (:Symmetric, :Hermitian)
         throw(DimensionMismatch("matrix size is inconsistent with symbolic analysis object"))
 
       # perform numerical factorization
-      S.__factorized = ldl_numeric_upper!(
+      (S.__factorized, S.__singular) = ldl_numeric_upper!(
         S.n,
         A.data.colptr,
         A.data.rowval,
@@ -699,6 +713,7 @@ function ldl_analyze(
     true,
     false,
     false,
+    true,
     n,
     parent,
     Lnz,
@@ -736,7 +751,7 @@ function ldl_factorize!(
   n = size(A, 1)
   n == S.n || throw(DimensionMismatch("matrix size is inconsistent with symbolic analysis object"))
 
-  S.__factorized = ldl_numeric!(
+  (S.__factorized, S.__singular) = ldl_numeric!(
     S.n,
     A.colptr,
     A.rowval,
@@ -782,7 +797,7 @@ function (\)(
   b::AbstractVector{T},
 ) where {T <: Number, Tf <: Number, Ti <: Integer, Tn <: Integer, Tp <: Integer}
   y = copy(b)
-  LDL.__factorized || throw(SQDException(error_string))
+  !LDL.__singular || throw(SQDException(error_string))
   ldl_solve!(LDL.n, y, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
 end
 
@@ -791,7 +806,7 @@ function (\)(
   B::AbstractMatrix{T},
 ) where {T <: Number, Tf <: Number, Ti <: Integer, Tn <: Integer, Tp <: Integer}
   Y = copy(B)
-  LDL.__factorized || throw(SQDException(error_string))
+  !LDL.__singular || throw(SQDException(error_string))
   ldl_solve!(LDL.n, Y, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
 end
 
@@ -806,14 +821,14 @@ If LDL is the LDLᵀ factorization of A, solves `A x = b` and overwrites b with 
   LDL::LDLFactorization{Tf, Ti, Tn, Tp},
   b::AbstractVector{T},
 ) where {T <: Number, Tf <: Number, Ti <: Integer, Tn <: Integer, Tp <: Integer} =
-  LDL.__factorized ? ldl_solve!(LDL.n, b, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P) :
+  !LDL.__singular ? ldl_solve!(LDL.n, b, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P) :
   throw(SQDException(error_string))
 
 @inline ldiv!(
   LDL::LDLFactorization{Tf, Ti, Tn, Tp},
   B::AbstractMatrix{T},
 ) where {T <: Number, Tf <: Number, Ti <: Integer, Tn <: Integer, Tp <: Integer} =
-  LDL.__factorized ? ldl_solve!(LDL.n, B, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P) :
+  !LDL.__singular ? ldl_solve!(LDL.n, B, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P) :
   throw(SQDException(error_string))
 
 """
@@ -827,7 +842,7 @@ function ldiv!(
   b::AbstractVector{T},
 ) where {T <: Number, Tf <: Number, Ti <: Integer, Tn <: Integer, Tp <: Integer}
   y .= b
-  LDL.__factorized || throw(SQDException(error_string))
+  !LDL.__singular || throw(SQDException(error_string))
   ldl_solve!(LDL.n, y, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
 end
 
@@ -837,7 +852,7 @@ function ldiv!(
   B::AbstractMatrix{T},
 ) where {T <: Number, Tf <: Number, Ti <: Integer, Tn <: Integer, Tp <: Integer}
   Y .= B
-  LDL.__factorized || throw(SQDException(error_string))
+  !LDL.__singular || throw(SQDException(error_string))
   ldl_solve!(LDL.n, Y, LDL.Lp, LDL.Li, LDL.Lx, LDL.d, LDL.P)
 end
 
