@@ -462,7 +462,6 @@ mutable struct LDLFactorization{T <: Number, Ti <: Integer, Tn <: Integer, Tp <:
   tol::T
   n_d::Tn
   # fields related to iterative refinement
-  r::Vector{T}
   dx::Vector{T}
 end
 
@@ -591,7 +590,6 @@ for (wrapper) in (:Symmetric, :Hermitian)
       pattern = Vector{Ti}(undef, n)
 
       # space for iterative refinement
-      r = Vector{Tf}(undef, n)
       dx = Vector{Tf}(undef, n)
 
       return LDLFactorization(
@@ -616,7 +614,6 @@ for (wrapper) in (:Symmetric, :Hermitian)
         zero(Tf),
         zero(Tf),
         n,
-        r,
         dx
       )
     end
@@ -731,7 +728,6 @@ function ldl_analyze(
   pattern = Vector{Ti}(undef, n)
 
   # space for iterative refinement
-  r = Vector{Tf}(undef, n)
   dx = Vector{Tf}(undef, n)
 
   return LDLFactorization(
@@ -756,7 +752,6 @@ function ldl_analyze(
     zero(Tf),
     zero(Tf),
     n,
-    r,
     dx
   )
 end
@@ -820,18 +815,18 @@ function ldl_refine!(
 ) where {Tf <: Number, Ti <: Integer, Tn <: Integer, Tp <: Integer}
 
   # Setup workspace
-  r, dx = LDL.r, LDL.dx
+  dx = LDL.dx
   solved = false
   k = 0
 
   while k < max_iter && !solved
 
     # Compute residual
-    mul!(r, LDL, x)
-    r .= b .- r # r = b - A*x
+    mul!(dx, LDL, x)
+    dx .= b .- dx # dx <- b - A*x
 
     # Compute correction
-    ldiv!(dx, LDL, r) # dx = A\r
+    ldiv!(LDL, dx) # dx <- A\dx
     x .+= dx
 
     # Update status
