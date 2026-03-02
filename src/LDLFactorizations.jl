@@ -819,19 +819,23 @@ function ldl_refine!(
   solved = false
   k = 0
 
-  while k < max_iter && !solved
+  # Perform iterative refinement step for each column of right hand side
+  for col in axes(b, 2)
+    while k < max_iter && !solved
 
-    # Compute residual
-    mul!(dx, LDL, x)
-    dx .= b .- dx # dx <- b - A*x
+      # Compute residual
+      @views mul!(dx, LDL, x[:, col]) # dx <- A*x
+      @views dx .= b[:, col] .- dx # dx <- b - A*x
 
-    # Compute correction
-    ldiv!(LDL, dx) # dx <- A\dx
-    x .+= dx
+      # Compute correction
+      ldiv!(LDL, dx) # dx <- A\dx
+      @views x[:, col] .+= dx
 
-    # Update status
-    k = k + 1
-    solved = norm(dx) < tol*norm(x)
+      # Update status
+      k = k + 1
+      @views solved = norm(dx) < tol*norm(x[:, col])
+    end
+    k = 0
   end
 
   return x
