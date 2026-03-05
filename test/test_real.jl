@@ -352,6 +352,7 @@
     x = similar(b)
     _allocs1 = @allocated ldiv!(x, S, b)
     @test _allocs1 == 0
+    ldl_refine!(S, x, b)
     _allocs1 = @allocated ldl_refine!(S, x, b)
     @test _allocs1 == 0
     _allocs2 = @allocated ldl_factorize!(M2, S)

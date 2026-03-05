@@ -527,9 +527,11 @@ of A.
 function ldl end
 
 """
-    x = ldl_refine!(LDL, x, b; max_iter = 50, tol = eps(T))
+    x = ldl_refine!(LDL, x, b; max_iter = 50, tol = sqrt(eps(T)))
 Given an LDLᵀ factorization, and an approximate solution LDLᵀx ≈ b, perform iterative refinement to improve the solution.
 The factorization should have been computed before calling this function (see example below).
+!!! warning 
+    `ldl_refine!` will allocate memory on the first call to store the correction term `dx` but subsequent calls will not allocate any additional memory.
 
 # Arguments
 - `LDL::LDLFactorization`: an LDLᵀ factorization;
@@ -538,7 +540,7 @@ The factorization should have been computed before calling this function (see ex
 
 # Keyword Arguments
 - `max_iter::Int = 50`: maximum number of iterations to perform;
-- `tol::T = eps(T)`: tolerance for convergence. The algorithm stops when `norm(dx) < tol*norm(x)` where `dx` is the correction computed at each iteration.
+- `tol::T = sqrt(eps(T))`: tolerance for convergence. The algorithm stops when `norm(dx) < tol*norm(x)` where `dx` is the correction computed at each iteration.
 
 # Example
     A = sprand(Float64, 10, 10, 0.2)
@@ -727,8 +729,8 @@ function ldl_analyze(
   Y = Vector{Tf}(undef, n)
   pattern = Vector{Ti}(undef, n)
 
-  # space for iterative refinement
-  dx = Vector{Tf}(undef, n)
+  # space for iterative refinement, allocate the space on the first call of ldl_refine!
+  dx = Vector{Tf}(undef, 0)
 
   return LDLFactorization(
     true,
@@ -811,11 +813,13 @@ function ldl_refine!(
   x::AbstractVecOrMat{Tf},
   b::AbstractVecOrMat{Tf}; 
   max_iter::Int = 50, 
-  tol = eps(real(Tf))
+  tol = sqrt(eps(real(Tf)))
 ) where {Tf <: Number, Ti <: Integer, Tn <: Integer, Tp <: Integer}
 
   # Setup workspace
+  length(LDL.dx) < size(x, 1) && (LDL.dx = similar(x, size(x, 1)))
   dx = LDL.dx
+
   solved = false
   k = 0
 
