@@ -4,7 +4,6 @@ A translation of Tim Davis's Concise LDLᵀ Factorization, part of [SuiteSparse]
 
 [![DOI](https://zenodo.org/badge/98073166.svg)](https://zenodo.org/badge/latestdoi/98073166)
 ![CI](https://github.com/JuliaSmoothOptimizers/LDLFactorizations.jl/workflows/CI/badge.svg?branch=main)
-[![Build Status](https://api.cirrus-ci.com/github/JuliaSmoothOptimizers/LDLFactorizations.jl.svg)](https://cirrus-ci.com/github/JuliaSmoothOptimizers/LDLFactorizations.jl)
 [![codecov](https://codecov.io/gh/JuliaSmoothOptimizers/LDLFactorizations.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/JuliaSmoothOptimizers/LDLFactorizations.jl)
 [![Documentation/stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://JuliaSmoothOptimizers.github.io/LDLFactorizations.jl/stable)
 [![Documentation/dev](https://img.shields.io/badge/docs-latest-blue.svg)](https://JuliaSmoothOptimizers.github.io/LDLFactorizations.jl/dev)
